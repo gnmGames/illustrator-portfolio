@@ -54,7 +54,12 @@
       </div>
 
       <div class="crop-controls" id="cropControls">
-        <p class="crop-controls__hint">이미지를 드래그해서 썸네일에 보일 부분을 정하세요.</p>
+        <p class="crop-controls__hint">네모 박스를 드래그해서 위치를 옮기고, 슬라이더로 크기를 조절하세요.</p>
+        <div class="crop-controls__zoom">
+          <span>축소</span>
+          <input type="range" id="cropZoomRange" min="20" max="100" value="100" step="1">
+          <span>확대</span>
+        </div>
         <div class="crop-controls__row">
           <button id="cropCenterBtn" type="button">가운데로</button>
           <button id="cropCancelBtn" type="button">취소</button>

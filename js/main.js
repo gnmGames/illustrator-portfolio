@@ -48,6 +48,7 @@
     cropCenterBtn: document.getElementById("cropCenterBtn"),
     cropCancelBtn: document.getElementById("cropCancelBtn"),
     cropApplyBtn: document.getElementById("cropApplyBtn"),
+    cropZoomRange: document.getElementById("cropZoomRange"),
   };
 
   var state = {
@@ -158,15 +159,22 @@
     canvas.getContext("2d").drawImage(imgEl, 0, 0, cw, ch);
     return canvas;
   }
-  function makeThumbCanvas(imgEl, cropPos, size) {
+  function normalizeCrop(item) {
+    return {
+      scale: item.cropScale == null ? 1 : item.cropScale,
+      x: item.cropX == null ? 0.5 : item.cropX,
+      y: item.cropY == null ? 0.5 : item.cropY,
+    };
+  }
+  function makeThumbCanvas(imgEl, crop, size) {
     var w = imgEl.naturalWidth, h = imgEl.naturalHeight;
-    var side = Math.min(w, h);
-    var sx = 0, sy = 0;
-    if (w > h) sx = (w - side) * cropPos;
-    else if (h > w) sy = (h - side) * cropPos;
+    var minSide = Math.min(w, h);
+    var boxSide = minSide * crop.scale;
+    var sx = (w - boxSide) * crop.x;
+    var sy = (h - boxSide) * crop.y;
     var canvas = document.createElement("canvas");
     canvas.width = size; canvas.height = size;
-    canvas.getContext("2d").drawImage(imgEl, sx, sy, side, side, 0, 0, size, size);
+    canvas.getContext("2d").drawImage(imgEl, sx, sy, boxSide, boxSide, 0, 0, size, size);
     return canvas;
   }
 
@@ -188,7 +196,9 @@
       return {
         id: d.id, w: d.w, h: d.h,
         title: d.title || "", category: d.category || "", year: d.year || "", description: d.description || "",
-        cropPos: typeof d.cropPos === "number" ? d.cropPos : 0.5,
+        cropScale: typeof d.cropScale === "number" ? d.cropScale : 1,
+        cropX: typeof d.cropX === "number" ? d.cropX : 0.5,
+        cropY: typeof d.cropY === "number" ? d.cropY : 0.5,
       };
     });
     var meta = Object.assign({ siteName: "", tagline: "" }, window.SITE_META || {});
@@ -202,7 +212,7 @@
 
     (raw.added || []).forEach(function (a) {
       if (!byId[a.id]) {
-        byId[a.id] = { id: a.id, w: a.w, h: a.h, title: "", category: "", year: "", description: "", cropPos: 0.5 };
+        byId[a.id] = { id: a.id, w: a.w, h: a.h, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5 };
       }
     });
 
@@ -236,7 +246,8 @@
 
       var edits = {}, added = [];
       state.items.forEach(function (it) {
-        edits[it.id] = { title: it.title, category: it.category, year: it.year, description: it.description, cropPos: it.cropPos == null ? 0.5 : it.cropPos };
+        var crop = normalizeCrop(it);
+        edits[it.id] = { title: it.title, category: it.category, year: it.year, description: it.description, cropScale: crop.scale, cropX: crop.x, cropY: crop.y };
         if (!defaultIds[it.id]) added.push({ id: it.id, w: it.w, h: it.h });
       });
       var payload = {
@@ -448,13 +459,13 @@
         return loadImageFile(file).then(function (img) {
           var id = nextImageId();
           var fullCanvas = makeFullCanvas(img, FULL_MAX);
-          var thumbCanvas = makeThumbCanvas(img, 0.5, THUMB_SIZE);
+          var thumbCanvas = makeThumbCanvas(img, { scale: 1, x: 0.5, y: 0.5 }, THUMB_SIZE);
           return Promise.all([canvasToWebp(fullCanvas, 0.85), canvasToWebp(thumbCanvas, 0.8)]).then(function (blobs) {
             var fullBlob = blobs[0], thumbBlob = blobs[1];
             var fullKey = id + ":full", thumbKey = id + ":thumb";
             blobRaw[fullKey] = fullBlob; blobMap[fullKey] = URL.createObjectURL(fullBlob);
             blobRaw[thumbKey] = thumbBlob; blobMap[thumbKey] = URL.createObjectURL(thumbBlob);
-            state.items.push({ id: id, w: img.naturalWidth, h: img.naturalHeight, title: "", category: "", year: "", description: "", cropPos: 0.5 });
+            state.items.push({ id: id, w: img.naturalWidth, h: img.naturalHeight, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5 });
             addedCount++;
             return Promise.all([idbSet(fullKey, fullBlob), idbSet(thumbKey, thumbBlob)]);
           });
@@ -605,20 +616,19 @@
     };
   }
 
+  var MIN_CROP_SCALE = 0.2;
+
   function positionCropBox() {
     var rect = computeImageScreenRect();
     if (!rect || state.currentIndex === null) return;
-    var square = Math.min(rect.width, rect.height);
     var item = state.items[state.currentIndex];
-    var cropPos = item.cropPos == null ? 0.5 : item.cropPos;
-    var x, y;
-    if (rect.width > rect.height) {
-      x = (rect.left - rect.mediaRect.left) + (rect.width - square) * cropPos;
-      y = rect.top - rect.mediaRect.top;
-    } else {
-      x = rect.left - rect.mediaRect.left;
-      y = (rect.top - rect.mediaRect.top) + (rect.height - square) * cropPos;
-    }
+    var crop = normalizeCrop(item);
+    var maxSquare = Math.min(rect.width, rect.height);
+    var square = maxSquare * crop.scale;
+    var travelX = rect.width - square;
+    var travelY = rect.height - square;
+    var x = (rect.left - rect.mediaRect.left) + travelX * crop.x;
+    var y = (rect.top - rect.mediaRect.top) + travelY * crop.y;
     els.cropBox.style.left = x + "px";
     els.cropBox.style.top = y + "px";
     els.cropBox.style.width = square + "px";
@@ -626,41 +636,53 @@
   }
 
   var cropDrag = null;
+  var cropSnapshot = null;
   function enterCropMode() {
     if (state.currentIndex === null) return;
     var item = state.items[state.currentIndex];
     if (item.w === item.h) { flashStatus("정사각형 이미지는 썸네일 조정이 필요 없습니다"); return; }
+    cropSnapshot = normalizeCrop(item);
     els.stage.classList.add("is-cropping");
+    els.cropZoomRange.value = String(Math.round(cropSnapshot.scale * 100));
     positionCropBox();
   }
   function exitCropMode() {
     if (!els.stage.classList.contains("is-cropping")) return;
+    if (state.currentIndex !== null && cropSnapshot) {
+      var item = state.items[state.currentIndex];
+      item.cropScale = cropSnapshot.scale;
+      item.cropX = cropSnapshot.x;
+      item.cropY = cropSnapshot.y;
+    }
     els.stage.classList.remove("is-cropping");
     cropDrag = null;
+    cropSnapshot = null;
   }
 
   els.cropBox.addEventListener("pointerdown", function (e) {
     var rect = computeImageScreenRect();
-    if (!rect) return;
-    var square = Math.min(rect.width, rect.height);
-    var axisWide = rect.width > rect.height;
-    var travel = (axisWide ? rect.width : rect.height) - square;
+    if (!rect || state.currentIndex === null) return;
     var item = state.items[state.currentIndex];
+    var crop = normalizeCrop(item);
+    var square = Math.min(rect.width, rect.height) * crop.scale;
     cropDrag = {
-      startClient: axisWide ? e.clientX : e.clientY,
-      startPos: item.cropPos == null ? 0.5 : item.cropPos,
-      travel: travel,
-      axisWide: axisWide,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      startX: crop.x,
+      startY: crop.y,
+      travelX: rect.width - square,
+      travelY: rect.height - square,
     };
     els.cropBox.classList.add("is-dragging");
     try { els.cropBox.setPointerCapture(e.pointerId); } catch (err) {}
   });
   els.cropBox.addEventListener("pointermove", function (e) {
     if (!cropDrag || state.currentIndex === null) return;
-    var delta = (cropDrag.axisWide ? e.clientX : e.clientY) - cropDrag.startClient;
-    var deltaFrac = cropDrag.travel > 0 ? delta / cropDrag.travel : 0;
-    var next = Math.max(0, Math.min(1, cropDrag.startPos + deltaFrac));
-    state.items[state.currentIndex].cropPos = next;
+    var dx = e.clientX - cropDrag.startClientX;
+    var dy = e.clientY - cropDrag.startClientY;
+    var item = state.items[state.currentIndex];
+    item.cropX = Math.max(0, Math.min(1, cropDrag.travelX > 0 ? cropDrag.startX + dx / cropDrag.travelX : 0.5));
+    item.cropY = Math.max(0, Math.min(1, cropDrag.travelY > 0 ? cropDrag.startY + dy / cropDrag.travelY : 0.5));
     positionCropBox();
   });
   function endCropDrag() {
@@ -671,24 +693,34 @@
   els.cropBox.addEventListener("pointerup", endCropDrag);
   els.cropBox.addEventListener("pointercancel", endCropDrag);
 
+  els.cropZoomRange.addEventListener("input", function () {
+    if (state.currentIndex === null) return;
+    var pct = Math.max(MIN_CROP_SCALE * 100, Math.min(100, Number(els.cropZoomRange.value)));
+    state.items[state.currentIndex].cropScale = pct / 100;
+    positionCropBox();
+  });
+
   els.cropEditBtn.addEventListener("click", enterCropMode);
   els.cropCancelBtn.addEventListener("click", exitCropMode);
   els.cropCenterBtn.addEventListener("click", function () {
     if (state.currentIndex === null) return;
-    state.items[state.currentIndex].cropPos = 0.5;
+    var item = state.items[state.currentIndex];
+    item.cropX = 0.5;
+    item.cropY = 0.5;
     positionCropBox();
   });
   els.cropApplyBtn.addEventListener("click", function () {
     var idx = state.currentIndex;
     if (idx === null) return;
     var item = state.items[idx];
-    var thumbCanvas = makeThumbCanvas(els.stageImage, item.cropPos == null ? 0.5 : item.cropPos, THUMB_SIZE);
+    var thumbCanvas = makeThumbCanvas(els.stageImage, normalizeCrop(item), THUMB_SIZE);
     canvasToWebp(thumbCanvas, 0.8).then(function (blob) {
       var key = item.id + ":thumb";
       if (blobMap[key]) URL.revokeObjectURL(blobMap[key]);
       blobRaw[key] = blob;
       blobMap[key] = URL.createObjectURL(blob);
       idbSet(key, blob).catch(function () {});
+      cropSnapshot = normalizeCrop(item);
       persist();
       updateCardThumb(idx);
       exitCropMode();
@@ -745,10 +777,11 @@
 
   // ---------- export / reset ----------
   function formatItem(it) {
+    var crop = normalizeCrop(it);
     return "  { id: " + JSON.stringify(it.id) + ", w: " + it.w + ", h: " + it.h +
       ", title: " + JSON.stringify(it.title) + ", category: " + JSON.stringify(it.category) +
       ", year: " + JSON.stringify(it.year) + ", description: " + JSON.stringify(it.description) +
-      ", cropPos: " + (it.cropPos == null ? 0.5 : it.cropPos) + " }";
+      ", cropScale: " + crop.scale + ", cropX: " + crop.x + ", cropY: " + crop.y + " }";
   }
 
   function buildDataFileText() {
