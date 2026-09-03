@@ -58,7 +58,8 @@ p{margin:0;}
 }
 .topbar__nav{display:flex; align-items:center; gap:12px;}
 .topbar__link{
-  background:none; border:none; color:#fff; cursor:pointer;
+  background:none; border:none; color:#fff; cursor:pointer; text-decoration:none;
+  display:inline-block; line-height:1;
   font-family:var(--font-mono); font-size:12px; letter-spacing:.05em; padding:9px 6px;
 }
 .edit-toggle{
@@ -366,6 +367,16 @@ body.edit-mode .edit-bar{transform:translate(-50%,0);}
     flex-direction:column; align-items:stretch; gap:10px; border-radius:16px;
   }
   body.edit-mode .edit-bar{transform:translateY(0);}
+}
+
+/* 좁은 폭에서 상단바가 넘쳐 브랜드/버튼이 여러 줄로 쪼개지는 것을 막는다
+   (nav 항목이 늘어나면서 320~360px 구간에서 무너졌다) */
+@media (max-width:430px){
+  .topbar{ padding:20px 16px; flex-wrap:wrap; row-gap:6px; }
+  .topbar__nav{ gap:4px; }
+  .topbar__link{ padding:9px 5px; }
+  .edit-toggle{ padding:9px 11px; }
+  .topbar__brand,.topbar__link,.edit-toggle{ white-space:nowrap; }
 }
 
 @media (prefers-reduced-motion:reduce){

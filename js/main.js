@@ -260,6 +260,35 @@
     }, 300);
   }
 
+  /* persist()는 300ms 디바운스라, 편집 직후 다른 페이지로 이동하면
+     마지막 입력이 저장되지 않은 채 사라진다. 화면이 숨겨지기 전에 강제로 flush 한다. */
+  function flushPersist() {
+    if (!saveTimer) return;
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    var defaultIds = {};
+    (window.PORTFOLIO_DATA || []).forEach(function (d) { defaultIds[d.id] = true; });
+    var edits = {}, added = [];
+    state.items.forEach(function (it) {
+      var crop = normalizeCrop(it);
+      edits[it.id] = { title: it.title, category: it.category, year: it.year, description: it.description, cropScale: crop.scale, cropX: crop.x, cropY: crop.y };
+      if (!defaultIds[it.id]) added.push({ id: it.id, w: it.w, h: it.h });
+    });
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        order: state.items.map(function (it) { return it.id; }),
+        edits: edits,
+        added: added,
+        meta: state.meta
+      }));
+    } catch (e) {}
+  }
+
+  window.addEventListener("pagehide", flushPersist);
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") flushPersist();
+  });
+
   // ---------- rendering: meta ----------
   function renderMeta() {
     els.brandName.textContent = state.meta.siteName || "PORTFOLIO";
