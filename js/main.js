@@ -49,6 +49,14 @@
     cropCancelBtn: document.getElementById("cropCancelBtn"),
     cropApplyBtn: document.getElementById("cropApplyBtn"),
     cropZoomRange: document.getElementById("cropZoomRange"),
+    stageVideo: document.getElementById("stageVideo"),
+    videoFacade: document.getElementById("videoFacade"),
+    videoThumb: document.getElementById("videoThumb"),
+    videoFrame: document.getElementById("videoFrame"),
+    videoClose: document.getElementById("videoClose"),
+    videoEdit: document.getElementById("videoEdit"),
+    videoUrlInput: document.getElementById("videoUrlInput"),
+    videoStatus: document.getElementById("videoStatus"),
   };
 
   var state = {
@@ -199,6 +207,7 @@
         cropScale: typeof d.cropScale === "number" ? d.cropScale : 1,
         cropX: typeof d.cropX === "number" ? d.cropX : 0.5,
         cropY: typeof d.cropY === "number" ? d.cropY : 0.5,
+        video: d.video || "",
       };
     });
     var meta = Object.assign({ siteName: "", tagline: "" }, window.SITE_META || {});
@@ -212,7 +221,7 @@
 
     (raw.added || []).forEach(function (a) {
       if (!byId[a.id]) {
-        byId[a.id] = { id: a.id, w: a.w, h: a.h, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5 };
+        byId[a.id] = { id: a.id, w: a.w, h: a.h, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" };
       }
     });
 
@@ -247,7 +256,7 @@
       var edits = {}, added = [];
       state.items.forEach(function (it) {
         var crop = normalizeCrop(it);
-        edits[it.id] = { title: it.title, category: it.category, year: it.year, description: it.description, cropScale: crop.scale, cropX: crop.x, cropY: crop.y };
+        edits[it.id] = { title: it.title, category: it.category, year: it.year, description: it.description, cropScale: crop.scale, cropX: crop.x, cropY: crop.y, video: it.video || "" };
         if (!defaultIds[it.id]) added.push({ id: it.id, w: it.w, h: it.h });
       });
       var payload = {
@@ -271,7 +280,7 @@
     var edits = {}, added = [];
     state.items.forEach(function (it) {
       var crop = normalizeCrop(it);
-      edits[it.id] = { title: it.title, category: it.category, year: it.year, description: it.description, cropScale: crop.scale, cropX: crop.x, cropY: crop.y };
+      edits[it.id] = { title: it.title, category: it.category, year: it.year, description: it.description, cropScale: crop.scale, cropX: crop.x, cropY: crop.y, video: it.video || "" };
       if (!defaultIds[it.id]) added.push({ id: it.id, w: it.w, h: it.h });
     });
     try {
@@ -315,6 +324,7 @@
       card.draggable = true;
       if (idx === 0) card.classList.add("is-cover");
       if (state.currentIndex === idx) card.classList.add("is-active");
+      if (parseYouTubeId(item.video)) card.classList.add("has-video");
 
       var frame = document.createElement("div");
       frame.className = "card__frame";
@@ -327,6 +337,10 @@
       var badge = document.createElement("span");
       badge.className = "card__cover-badge";
       badge.textContent = "COVER";
+
+      var videoMark = document.createElement("span");
+      videoMark.className = "card__video";
+      videoMark.setAttribute("aria-hidden", "true");
 
       var overlay = document.createElement("div");
       overlay.className = "card__overlay";
@@ -341,6 +355,7 @@
 
       frame.appendChild(img);
       frame.appendChild(badge);
+      frame.appendChild(videoMark);
       frame.appendChild(overlay);
 
       var prevBtn = document.createElement("button");
@@ -494,7 +509,7 @@
             var fullKey = id + ":full", thumbKey = id + ":thumb";
             blobRaw[fullKey] = fullBlob; blobMap[fullKey] = URL.createObjectURL(fullBlob);
             blobRaw[thumbKey] = thumbBlob; blobMap[thumbKey] = URL.createObjectURL(thumbBlob);
-            state.items.push({ id: id, w: img.naturalWidth, h: img.naturalHeight, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5 });
+            state.items.push({ id: id, w: img.naturalWidth, h: img.naturalHeight, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" });
             addedCount++;
             return Promise.all([idbSet(fullKey, fullBlob), idbSet(thumbKey, thumbBlob)]);
           });
@@ -568,6 +583,8 @@
 
   function showCover() {
     state.currentIndex = null;
+    closeVideo();
+    els.stage.classList.remove("has-video");
     els.stage.classList.remove("is-piece");
     setStageImage(fullSrc(state.items[0].id));
     highlightActiveCard();
@@ -580,6 +597,7 @@
     var item = state.items[idx];
     els.stage.classList.add("is-piece");
     setStageImage(fullSrc(item.id));
+    applyVideo(item);
     fillPanel(item, idx);
     highlightActiveCard();
     if (opts.scroll !== false) window.scrollTo({ top: 0, behavior: "smooth" });
@@ -619,6 +637,84 @@
     setField(els.panelYear, item.year, state.editMode);
     setField(els.panelDesc, item.description, state.editMode);
     els.cropEditBtn.style.display = item.w === item.h ? "none" : "";
+
+    if (document.activeElement !== els.videoUrlInput) {
+      els.videoUrlInput.value = item.video || "";
+    }
+    var vid = parseYouTubeId(item.video);
+    els.videoStatus.textContent = !item.video
+      ? ""
+      : (vid ? "영상 연결됨 · " + vid : "YouTube 주소를 인식하지 못했습니다");
+    els.videoStatus.classList.toggle("is-bad", !!item.video && !vid);
+  }
+
+  // ---------- 프로세스 영상 (YouTube) ----------
+  /* iframe 은 재생 버튼을 누를 때만 만든다. 미리 심으면 작품을 열 때마다
+     유튜브 스크립트를 통째로 받아오고 서드파티 쿠키까지 붙는다. */
+  function parseYouTubeId(raw) {
+    var v = (raw || "").trim();
+    if (!v) return "";
+    if (/^[A-Za-z0-9_-]{11}$/.test(v)) return v;
+    var m = v.match(/(?:youtube\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+    return m ? m[1] : "";
+  }
+
+  function closeVideo() {
+    els.stage.classList.remove("is-video-open");
+    els.videoFrame.innerHTML = "";           // iframe 제거 = 재생 중지
+    els.videoFacade.setAttribute("aria-expanded", "false");
+  }
+
+  function applyVideo(item) {
+    closeVideo();
+    var id = parseYouTubeId(item && item.video);
+    els.stage.classList.toggle("has-video", !!id);
+    if (!id) {
+      els.videoThumb.removeAttribute("src");
+      return;
+    }
+    els.videoThumb.style.display = "";
+    els.videoThumb.src = "https://i.ytimg.com/vi/" + id + "/hqdefault.jpg";
+  }
+
+  function openVideo() {
+    if (state.currentIndex === null) return;
+    var id = parseYouTubeId(state.items[state.currentIndex].video);
+    if (!id) return;
+    var frame = document.createElement("iframe");
+    frame.src = "https://www.youtube-nocookie.com/embed/" + id + "?autoplay=1&rel=0&modestbranding=1";
+    frame.title = "제작 과정 영상";
+    frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+    frame.setAttribute("allowfullscreen", "");
+    frame.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+    els.videoFrame.innerHTML = "";
+    els.videoFrame.appendChild(frame);
+    els.stage.classList.add("is-video-open");
+    els.videoFacade.setAttribute("aria-expanded", "true");
+  }
+
+  els.videoThumb.addEventListener("error", function () { els.videoThumb.style.display = "none"; });
+  els.videoFacade.addEventListener("click", openVideo);
+  els.videoClose.addEventListener("click", closeVideo);
+
+  els.videoUrlInput.addEventListener("input", function () {
+    if (state.currentIndex === null) return;
+    var item = state.items[state.currentIndex];
+    item.video = els.videoUrlInput.value.trim();
+    var id = parseYouTubeId(item.video);
+    els.videoStatus.textContent = !item.video
+      ? ""
+      : (id ? "영상 연결됨 · " + id : "YouTube 주소를 인식하지 못했습니다");
+    els.videoStatus.classList.toggle("is-bad", !!item.video && !id);
+    applyVideo(item);
+    updateCardVideo(state.currentIndex);
+    persist();
+  });
+
+  function updateCardVideo(idx) {
+    var card = els.grid.children[idx];
+    if (!card) return;
+    card.classList.toggle("has-video", !!parseYouTubeId(state.items[idx].video));
   }
 
   // ---------- thumbnail crop ----------
@@ -810,7 +906,8 @@
     return "  { id: " + JSON.stringify(it.id) + ", w: " + it.w + ", h: " + it.h +
       ", title: " + JSON.stringify(it.title) + ", category: " + JSON.stringify(it.category) +
       ", year: " + JSON.stringify(it.year) + ", description: " + JSON.stringify(it.description) +
-      ", cropScale: " + crop.scale + ", cropX: " + crop.x + ", cropY: " + crop.y + " }";
+      ", cropScale: " + crop.scale + ", cropX: " + crop.x + ", cropY: " + crop.y +
+      ", video: " + JSON.stringify(it.video || "") + " }";
   }
 
   function buildDataFileText() {

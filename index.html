@@ -31,6 +31,18 @@
   <section class="stage" id="stage">
     <div class="stage__media" id="stageMedia">
       <img class="stage__image" id="stageImage" src="" alt="" draggable="false">
+
+      <div class="stage__video" id="stageVideo">
+        <button class="vfacade" id="videoFacade" type="button" aria-expanded="false">
+          <img class="vfacade__thumb" id="videoThumb" alt="" aria-hidden="true">
+          <span class="vfacade__body">
+            <span class="vfacade__play" aria-hidden="true"></span>
+            <span class="vfacade__label">Process Video<i>제작 과정 영상 보기</i></span>
+          </span>
+        </button>
+        <div class="vframe" id="videoFrame"></div>
+        <button class="vclose" id="videoClose" type="button">영상 닫기</button>
+      </div>
     </div>
     <div class="stage__scrim" aria-hidden="true"></div>
 
@@ -50,6 +62,13 @@
       <h2 class="stage__field stage__piece-title" id="panelTitle" data-placeholder="제목을 입력하세요"></h2>
       <p class="stage__field stage__year" id="panelYear" data-placeholder="연도"></p>
       <p class="stage__field stage__desc" id="panelDesc" data-placeholder="이 작품에 대한 설명을 입력하세요."></p>
+
+      <div class="stage__video-edit" id="videoEdit">
+        <label for="videoUrlInput">프로세스 영상 (YouTube 주소)</label>
+        <input type="url" id="videoUrlInput" autocomplete="off" spellcheck="false"
+               placeholder="https://youtu.be/... — 없으면 비워두세요">
+        <p class="video-edit__status" id="videoStatus"></p>
+      </div>
 
       <div class="stage__edit-actions" id="stageEditActions">
         <button id="cropEditBtn" type="button">썸네일 편집</button>
