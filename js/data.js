@@ -36,9 +36,6 @@ window.PORTFOLIO_DATA = [
   { id: "img-11", w: 1200, h: 1697, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
   { id: "img-02", w: 4770, h: 5325, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
   { id: "img-10", w: 5000, h: 5000, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
-  { id: "img-25", w: 3852, h: 2124, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
-  { id: "img-05", w: 10663, h: 7214, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
-  { id: "img-19", w: 1920, h: 1511, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
   { id: "img-20", w: 1920, h: 1919, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
   { id: "img-28", w: 5333, h: 3000, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" }
 ];
