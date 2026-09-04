@@ -530,7 +530,7 @@
   function updateCardThumb(idx) {
     var card = cardByIndex(idx);
     if (!card) return;
-    var imgEl = card.querySelector(".card__frame > img");
+    var imgEl = card.querySelector(".card__frame > img:not(.card__motion-gif)");
     if (imgEl) imgEl.src = thumbSrc(state.items[idx].id);
   }
 
@@ -1282,6 +1282,12 @@
     var sy = (h - box) * crop.y;
     el.style.position = "absolute";
     el.style.left = "0"; el.style.top = "0";
+    /* 전역 리셋의 img{max-width:100%} 가 크롭 상자를 잘라낸다. 크롭을 작게
+       잡을수록 상자는 카드보다 커지는데(예: 배율 0.4 -> 너비 750%), 너비만
+       100% 로 잘리고 높이는 그대로 남아 엉뚱한 자리가 늘어난 채로 나온다.
+       배율이 1 일 때는 너비가 정확히 100% 라 잘릴 게 없어 멀쩡해 보인다. */
+    el.style.maxWidth = "none";
+    el.style.maxHeight = "none";
     el.style.width = (w / box * 100) + "%";
     el.style.height = "auto";                 /* 세로는 비율이 정한다 */
     el.style.aspectRatio = w + " / " + h;     /* 찌그러짐 자체를 불가능하게 */
@@ -1346,7 +1352,11 @@
 
     card.addEventListener("mouseenter", function () {
       hovering = true;
-      ensureMotion();
+      var el = ensureMotion();
+      /* 크롭을 다시 잡아도 카드는 새로 만들어지지 않는다(썸네일 그림만 갈아끼운다).
+         만들어 둘 때 한 번만 앉히면 그 뒤에 바꾼 크롭이 재생에 반영되지 않아,
+         썸네일과 재생 화면이 서로 다른 자리·다른 배율이 된다. 매번 다시 앉힌다. */
+      applyCropBox(el, item, el.naturalWidth || el.videoWidth, el.naturalHeight || el.videoHeight);
       reveal();                         /* 이미 받아둔 뒤라면 곧바로 나온다 */
     });
     card.addEventListener("mouseleave", function () {
