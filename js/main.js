@@ -577,14 +577,16 @@
     if (!files.length) return;
 
     var chain = Promise.resolve();
-    var addedCount = 0, failed = [];
+    var addedCount = 0, failed = [], heavy = [];
 
     files.forEach(function (file) {
       chain = chain.then(function () {
+        var mb = Math.round(file.size / 1048576);
         if (file.size > MOTION_MAX_BYTES) {
-          failed.push(file.name + " " + Math.round(file.size / 1048576) + "MB");
+          failed.push(file.name + " " + mb + "MB");
           return;
         }
+        if (file.size > MOTION_WARN_BYTES) heavy.push(file.name + " " + mb + "MB");
         var ext = motionExt(file);
         var loading = /^video\//.test(file.type)
           ? loadVideoFile(file)
@@ -628,11 +630,16 @@
       persist();
       renderGrid();
       var msg = addedCount + "개를 추가했습니다";
+      if (heavy.length) {
+        msg += " · " + heavy[0] + (heavy.length > 1 ? " 외 " + (heavy.length - 1) + "개" : "")
+             + "는 용량이 커서 저장과 로딩이 오래 걸립니다";
+      }
       if (failed.length) {
         msg += " · 실패 " + failed.length + "개 (" + failed[0]
-             + (failed.length > 1 ? " 외" : "") + ") — 25MB 이하의 GIF·MP4·WebM 을 써주세요";
+             + (failed.length > 1 ? " 외" : "") + ") — 한 파일 70MB 까지만 올라갑니다"
+             + " (GitHub 한도). GIF 보다 MP4·WebM 이 훨씬 작습니다";
       }
-      flashStatus(msg, failed.length ? "bad" : "");
+      flashStatus(msg, failed.length ? "bad" : (heavy.length ? "warn" : ""));
     });
   }
 
@@ -1074,12 +1081,16 @@
     clearTimeout(statusTimer);
     els.editStatus.textContent = msg;
     els.editStatus.classList.toggle("is-ok", kind === "ok");
+    els.editStatus.classList.toggle("is-warn", kind === "warn");
     els.editStatus.classList.toggle("is-bad", kind === "bad");
+    /* 경고·실패는 읽어야 할 내용이 있으니 더 오래 띄운다 */
+    var hold = (kind === "bad" || kind === "warn") ? 9000 : 3200;
     statusTimer = setTimeout(function () {
       els.editStatus.classList.remove("is-ok");
+      els.editStatus.classList.remove("is-warn");
       els.editStatus.classList.remove("is-bad");
       els.editStatus.textContent = "편집 모드 · 변경 사항은 이 브라우저에 자동 저장됩니다";
-    }, 3200);
+    }, hold);
   }
 
   function downloadBlob(blob, filename) {
@@ -1177,7 +1188,13 @@
   /* 원본 파일은 그대로 보관하고 첫 프레임을 포스터(full/thumb webp)로 만든다.
      평소에는 포스터를 보여주고 호버·상세에서만 재생한다 — 그리드 수십 칸이
      한꺼번에 재생되면 브라우저가 버티지 못한다. */
-  var MOTION_MAX_BYTES = 25 * 1024 * 1024;
+  /* 한 파일의 상한은 우리 취향이 아니라 GitHub 이 정한다 — 한 파일 100MB 를
+     넘기면 받아주지 않는다. "사이트에 저장"은 파일을 base64 로 바꿔 올리는데
+     그 과정에서 4/3 배로 부풀기 때문에, 원본이 75MB 를 넘으면 그 시점에
+     업로드가 깨진다. 그래서 70MB 를 천장으로 둔다.
+     20MB 부터는 막지 않고 알려만 준다 — 올라는 가지만 보는 사람이 기다린다. */
+  var MOTION_MAX_BYTES = 70 * 1024 * 1024;
+  var MOTION_WARN_BYTES = 20 * 1024 * 1024;
 
   function motionExt(file) {
     if (file.type === "image/gif") return "gif";
