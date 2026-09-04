@@ -252,6 +252,9 @@ body.edit-mode .edit-hint{display:block;}
 .grid{
   display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:3px;
   margin-top:30px;
+  /* 그리드 항목의 기본 정렬은 stretch 이고, stretch 는 aspect-ratio 를 이긴다.
+     한 줄에 조금이라도 키가 큰 항목이 끼면 그 줄 카드가 전부 직사각형이 된다. */
+  align-items:start;
 }
 .card{
   position:relative; aspect-ratio:1/1; overflow:hidden; background:var(--bg-soft); cursor:pointer;

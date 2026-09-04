@@ -1259,16 +1259,21 @@
 
   /* 썸네일로 잘라둔 그 사각형이 카드를 채우도록 미디어를 직접 앉힌다.
      object-fit:cover 는 무조건 한가운데를 쓰기 때문에, 작가가 지정한 크롭 위치가
-     재생 순간 무시되고 엉뚱한 데가 보인다. makeThumbCanvas 의 계산을 그대로 옮긴다.
+     재생 순간 무시된다. makeThumbCanvas 의 계산을 그대로 옮긴다.
 
-       boxSide = min(w,h) * scale
-       sx = (w - boxSide) * cropX
-       sy = (h - boxSide) * cropY
+       box = min(w,h) * scale
+       sx  = (w - box) * cropX
+       sy  = (h - box) * cropY
 
-     카드 한 변을 100% 로 두고 비율로 환산하면 원본 픽셀 크기와 무관해진다 —
-     GIF 원본과 저장된 w/h 의 실제 해상도가 달라도 비율만 같으면 맞는다. */
-  function applyCropBox(el, item) {
-    var w = item.w, h = item.h;
+     길이는 전부 카드 '가로'만 기준으로 삼는다. 가로는 너비, 세로는 높이로 재면
+     카드가 정사각형이 아닌 순간(그리드 stretch 등) 두 축이 서로 다른 배율로
+     늘어나 비율이 깨진다 — 퍼센트 margin 은 세로 방향이라도 가로를 기준으로
+     계산되므로 top 대신 이걸 쓴다. 비율은 aspect-ratio 로 못박는다.
+
+     w/h 는 호출부가 넘겨준 실제 미디어 크기를 우선 쓴다. 저장된 값이 원본과
+     다를 수 있고, 그러면 그 차이가 그대로 찌그러짐이 된다. */
+  function applyCropBox(el, item, w, h) {
+    w = w || item.w; h = h || item.h;
     if (!w || !h) return;
     var crop = normalizeCrop(item);
     var box = Math.min(w, h) * crop.scale;
@@ -1276,11 +1281,13 @@
     var sx = (w - box) * crop.x;
     var sy = (h - box) * crop.y;
     el.style.position = "absolute";
+    el.style.left = "0"; el.style.top = "0";
     el.style.width = (w / box * 100) + "%";
-    el.style.height = (h / box * 100) + "%";
-    el.style.left = (-sx / box * 100) + "%";
-    el.style.top = (-sy / box * 100) + "%";
-    el.style.objectFit = "fill";   /* 크기를 직접 정했으니 맞춰 늘리지 말 것 */
+    el.style.height = "auto";                 /* 세로는 비율이 정한다 */
+    el.style.aspectRatio = w + " / " + h;     /* 찌그러짐 자체를 불가능하게 */
+    el.style.marginLeft = (-sx / box * 100) + "%";
+    el.style.marginTop = (-sy / box * 100) + "%";
+    el.style.objectFit = "fill";
   }
 
   /* 썸네일 호버 재생 */
@@ -1319,11 +1326,17 @@
       if (isGif) {
         motionEl.alt = "";
         motionEl.decoding = "async";
-        motionEl.addEventListener("load", function () { ready = true; reveal(); });
+        motionEl.addEventListener("load", function () {
+          applyCropBox(motionEl, item, motionEl.naturalWidth, motionEl.naturalHeight);
+          ready = true; reveal();
+        });
       } else {
         motionEl.muted = true; motionEl.loop = true; motionEl.playsInline = true;
         motionEl.preload = "auto";
-        motionEl.addEventListener("loadeddata", function () { ready = true; reveal(); });
+        motionEl.addEventListener("loadeddata", function () {
+          applyCropBox(motionEl, item, motionEl.videoWidth, motionEl.videoHeight);
+          ready = true; reveal();
+        });
       }
       frame.appendChild(motionEl);
       applyCropBox(motionEl, item);     /* 썸네일로 지정한 그 자리 */
