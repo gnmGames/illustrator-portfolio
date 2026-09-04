@@ -488,3 +488,87 @@ body.edit-mode .stage__video-edit{display:block;}
 /* 크롭 중에는 영상 바를 숨긴다 — 숨겨야 이미지가 원래 크기로 돌아와
    크롭 박스가 실제 이미지와 정확히 겹친다 (.stage__video-edit 와 동일한 처리) */
 .stage.is-piece.is-cropping .stage__video{display:none;}
+
+/* ===== 사이트에 저장 (GitHub) ===== */
+.edit-bar button.publish{
+  border-color:var(--accent); background:var(--accent); color:#0b0b0c; font-weight:600;
+}
+.edit-bar button.publish:hover{opacity:.88;}
+.edit-bar button.publish[disabled]{opacity:.5; cursor:default;}
+
+.token-panel{
+  position:fixed; inset:0; z-index:300; display:none;
+  align-items:center; justify-content:center; padding:24px;
+  background:rgba(4,4,5,.82);
+}
+.token-panel.is-open{display:flex;}
+.token-panel__box{
+  width:100%; max-width:520px; max-height:88vh; overflow:auto;
+  background:var(--bg-soft); border:1px solid var(--line); border-radius:4px;
+  padding:26px 26px 22px;
+}
+.token-panel__title{
+  font-size:16px; font-weight:600; letter-spacing:-.02em; margin:0 0 16px; color:var(--fg);
+}
+.token-panel__steps{
+  margin:0 0 18px; padding-left:20px;
+  font-size:12.5px; line-height:1.85; color:var(--fg-muted);
+}
+.token-panel__steps b{color:var(--fg); font-weight:600;}
+.token-panel__steps a{color:var(--accent);}
+.token-panel input[type="password"]{
+  width:100%; padding:11px 12px; border-radius:2px;
+  background:rgba(255,255,255,.05); border:1px solid var(--line); color:var(--fg);
+  font-family:var(--font-mono); font-size:12.5px;
+}
+.token-panel input[type="password"]:focus{outline:none; border-color:var(--accent);}
+.token-panel__remember{
+  display:flex; align-items:flex-start; gap:8px; margin-top:12px;
+  font-size:12px; line-height:1.5; color:var(--fg-muted); cursor:pointer;
+}
+.token-panel__remember input{margin-top:2px; accent-color:var(--accent);}
+.token-panel__warn{
+  margin-top:14px; padding:10px 12px; border-radius:2px;
+  border:1px solid rgba(255,90,60,.35); background:rgba(255,90,60,.07);
+  font-size:11.5px; line-height:1.6; color:#e9c3ba;
+}
+.token-panel__warn b{color:var(--fg);}
+.token-panel__row{display:flex; gap:8px; margin-top:18px;}
+.token-panel__row button{
+  flex:1; padding:11px 14px; border-radius:2px; cursor:pointer;
+  background:transparent; border:1px solid var(--line); color:var(--fg);
+  font-family:var(--font-mono); font-size:12px;
+}
+.token-panel__row button:hover{border-color:var(--accent); color:var(--accent);}
+.token-panel__row button.publish{
+  background:var(--accent); border-color:var(--accent); color:#0b0b0c; font-weight:600;
+}
+.token-panel__row button.publish:hover{opacity:.88; color:#0b0b0c;}
+.token-panel__forget{
+  display:block; margin:14px auto 0; padding:6px 10px;
+  background:none; border:0; color:var(--fg-faint); cursor:pointer;
+  font-family:var(--font-mono); font-size:11px; text-decoration:underline;
+}
+.token-panel__forget:hover{color:#ff7a6b;}
+
+.edit-bar__status.is-ok{color:#8bd6a0;}
+.edit-bar__status.is-bad{color:#ff7a6b;}
+
+/* ===== 키보드 조작 안내 ===== */
+.stage__keyhint{
+  display:flex; align-items:center; flex-wrap:wrap; gap:5px;
+  margin-top:12px; font-size:11px; color:var(--fg-muted);
+}
+.stage__keyhint kbd{
+  display:inline-block; min-width:20px; padding:3px 6px; text-align:center;
+  font-family:var(--font-mono); font-size:10px; line-height:1.2; color:var(--fg);
+  background:rgba(255,255,255,.06); border:1px solid var(--line);
+  border-radius:3px; box-shadow:0 1px 0 rgba(0,0,0,.45);
+}
+.stage__keyhint span{letter-spacing:-.01em;}
+.stage__keyhint i{width:1px; height:11px; background:var(--line); margin:0 4px;}
+.stage.is-cropping .stage__keyhint{display:none;}
+
+@media (max-width:720px){
+  .stage__keyhint{display:none;}   /* 터치 기기에서는 안내할 키가 없다 */
+}

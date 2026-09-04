@@ -57,6 +57,14 @@
     videoEdit: document.getElementById("videoEdit"),
     videoUrlInput: document.getElementById("videoUrlInput"),
     videoStatus: document.getElementById("videoStatus"),
+    publishBtn: document.getElementById("publishBtn"),
+    tokenPanel: document.getElementById("tokenPanel"),
+    tokenInput: document.getElementById("tokenInput"),
+    tokenRemember: document.getElementById("tokenRemember"),
+    tokenSaveBtn: document.getElementById("tokenSaveBtn"),
+    tokenCancelBtn: document.getElementById("tokenCancelBtn"),
+    tokenForgetBtn: document.getElementById("tokenForgetBtn"),
+    tokenBtn: document.getElementById("tokenBtn"),
   };
 
   var state = {
@@ -933,10 +941,14 @@
   }
 
   var statusTimer = null;
-  function flashStatus(msg) {
+  function flashStatus(msg, kind) {
     clearTimeout(statusTimer);
     els.editStatus.textContent = msg;
+    els.editStatus.classList.toggle("is-ok", kind === "ok");
+    els.editStatus.classList.toggle("is-bad", kind === "bad");
     statusTimer = setTimeout(function () {
+      els.editStatus.classList.remove("is-ok");
+      els.editStatus.classList.remove("is-bad");
       els.editStatus.textContent = "편집 모드 · 변경 사항은 이 브라우저에 자동 저장됩니다";
     }, 3200);
   }
@@ -989,6 +1001,162 @@
     flashStatus("편집 내용을 초기화했습니다");
   });
 
+  // ---------- 사이트에 저장 (GitHub Git Data API) ----------
+  /* data.js 와 새/재크롭 이미지를 커밋 하나로 한 번에 올린다.
+     파일을 하나씩 올리면 중간에 끊겼을 때 data.js 는 새것인데
+     이미지는 아직 없는 상태가 배포된다. */
+  var REPO_OWNER = "gnmGames";
+  var REPO_NAME = "illustrator-portfolio";
+  var REPO_BRANCH = "main";
+  var TOKEN_KEY = "illustPortfolio:ghToken";
+
+  function getToken() {
+    try { return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY) || ""; }
+    catch (e) { return ""; }
+  }
+  function setToken(v, remember) {
+    try {
+      sessionStorage.setItem(TOKEN_KEY, v);
+      if (remember) localStorage.setItem(TOKEN_KEY, v);
+      else localStorage.removeItem(TOKEN_KEY);
+    } catch (e) {}
+  }
+  function forgetToken() {
+    try { sessionStorage.removeItem(TOKEN_KEY); localStorage.removeItem(TOKEN_KEY); } catch (e) {}
+  }
+
+  function openTokenPanel() {
+    els.tokenInput.value = "";
+    try { els.tokenRemember.checked = !!localStorage.getItem(TOKEN_KEY); } catch (e) {}
+    els.tokenPanel.classList.add("is-open");
+    els.tokenInput.focus();
+  }
+  function closeTokenPanel() {
+    els.tokenPanel.classList.remove("is-open");
+    els.tokenInput.value = "";      /* 토큰 문자열을 DOM 에 남기지 않는다 */
+  }
+
+  function ghApi(method, path, token, body) {
+    return fetch("https://api.github.com/repos/" + REPO_OWNER + "/" + REPO_NAME + path, {
+      method: method,
+      headers: {
+        "Authorization": "Bearer " + token,
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
+      },
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function (res) {
+      if (res.ok) return res.json();
+      var err = new Error("github " + res.status);
+      err.status = res.status;
+      throw err;
+    });
+  }
+
+  function blobToBase64(blob) {
+    return new Promise(function (resolve, reject) {
+      var r = new FileReader();
+      r.onload = function () { resolve(String(r.result).split(",")[1] || ""); };
+      r.onerror = function () { reject(new Error("read fail")); };
+      r.readAsDataURL(blob);
+    });
+  }
+
+  function describeGhError(e) {
+    if (e && e.status === 401) return "토큰이 유효하지 않습니다 — 다시 발급해 주세요";
+    if (e && e.status === 403) return "권한이 부족합니다 — Contents 를 Read and write 로 설정했는지 확인해 주세요";
+    if (e && e.status === 404) return "저장소에 접근할 수 없습니다 — 토큰에 illustrator-portfolio 를 선택했는지 확인해 주세요";
+    if (e && (e.status === 409 || e.status === 422)) return "저장소가 그 사이 바뀌었습니다 — 새로고침 후 다시 시도해 주세요";
+    if (e && e.status) return "저장 실패 (오류 " + e.status + ")";
+    return "저장 실패 — 네트워크를 확인해 주세요";
+  }
+
+  function publishToSite() {
+    var token = getToken();
+    if (!token) { openTokenPanel(); return; }
+
+    els.publishBtn.disabled = true;
+    var keys = Object.keys(blobRaw);
+    var baseSha, baseTree, tree = [];
+    flashStatus("저장 준비 중…", "");
+
+    ghApi("GET", "/git/ref/heads/" + REPO_BRANCH, token)
+      .then(function (ref) {
+        baseSha = ref.object.sha;
+        return ghApi("GET", "/git/commits/" + baseSha, token);
+      })
+      .then(function (commit) {
+        baseTree = commit.tree.sha;
+        tree.push({ path: "js/data.js", mode: "100644", type: "blob", content: buildDataFileText() });
+
+        /* 이미지는 blob 으로 올린 뒤 트리에 sha 로 엮는다 */
+        return keys.reduce(function (chain, key, i) {
+          return chain.then(function () {
+            flashStatus("이미지 업로드 " + (i + 1) + "/" + keys.length + "…", "");
+            return blobToBase64(blobRaw[key])
+              .then(function (b64) {
+                return ghApi("POST", "/git/blobs", token, { content: b64, encoding: "base64" });
+              })
+              .then(function (blob) {
+                var parts = key.split(":");   /* [id, "full"|"thumb"] */
+                tree.push({
+                  path: "assets/img/" + parts[1] + "/" + parts[0] + ".webp",
+                  mode: "100644", type: "blob", sha: blob.sha
+                });
+              });
+          });
+        }, Promise.resolve());
+      })
+      .then(function () {
+        flashStatus("커밋 중…", "");
+        return ghApi("POST", "/git/trees", token, { base_tree: baseTree, tree: tree });
+      })
+      .then(function (newTree) {
+        var msg = "site: 작품 " + state.items.length + "개 저장"
+          + (keys.length ? " (이미지 " + keys.length + "개)" : "");
+        return ghApi("POST", "/git/commits", token, {
+          message: msg, tree: newTree.sha, parents: [baseSha]
+        });
+      })
+      .then(function (commit) {
+        return ghApi("PATCH", "/git/refs/heads/" + REPO_BRANCH, token, { sha: commit.sha });
+      })
+      .then(function () {
+        flashStatus("저장했습니다 — 1~2분 뒤 사이트에 반영됩니다", "ok");
+      })
+      .catch(function (e) {
+        flashStatus(describeGhError(e), "bad");
+      })
+      .then(function () {
+        els.publishBtn.disabled = false;
+      });
+  }
+
+  els.publishBtn.addEventListener("click", publishToSite);
+  /* 토큰이 이미 저장돼 있으면 publishToSite 가 패널을 열지 않으므로,
+     토큰을 바꾸거나 지우려면 이 버튼이 필요하다 */
+  els.tokenBtn.addEventListener("click", openTokenPanel);
+  els.tokenCancelBtn.addEventListener("click", closeTokenPanel);
+  els.tokenForgetBtn.addEventListener("click", function () {
+    forgetToken();
+    closeTokenPanel();
+    flashStatus("저장된 토큰을 지웠습니다", "");
+  });
+  els.tokenSaveBtn.addEventListener("click", function () {
+    var v = els.tokenInput.value.trim();
+    if (!v) { els.tokenInput.focus(); return; }
+    setToken(v, els.tokenRemember.checked);
+    closeTokenPanel();
+    publishToSite();
+  });
+  els.tokenInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); els.tokenSaveBtn.click(); }
+    if (e.key === "Escape") { e.preventDefault(); closeTokenPanel(); }
+  });
+  els.tokenPanel.addEventListener("click", function (e) {
+    if (e.target === els.tokenPanel) closeTokenPanel();
+  });
+
   // ---------- nav wiring ----------
   els.prevBtn.addEventListener("click", function () { step(-1); });
   els.nextBtn.addEventListener("click", function () { step(1); });
@@ -1011,6 +1179,16 @@
        그대로 남아 다음 타이핑에 엉뚱한 작품으로 저장된다. */
     var tag = active && active.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    if (els.tokenPanel.classList.contains("is-open")) return;
+
+    /* 스페이스바: 작품을 보고 있을 때만 다음으로. 커버·갤러리에서는
+       기본 동작(페이지 스크롤)을 그대로 둔다. Shift+Space 는 이전. */
+    if (e.key === " " || e.code === "Space") {
+      if (state.currentIndex === null) return;
+      e.preventDefault();
+      step(e.shiftKey ? -1 : 1);
+      return;
+    }
     if (e.key === "Escape" && state.currentIndex !== null) closePiece();
     if (e.key === "ArrowLeft") step(-1);
     if (e.key === "ArrowRight") step(1);
