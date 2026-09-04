@@ -255,9 +255,16 @@ body.edit-mode .edit-hint{display:block;}
 }
 .card{
   position:relative; aspect-ratio:1/1; overflow:hidden; background:var(--bg-soft); cursor:pointer;
-  opacity:0; transform:translateY(26px); transition:opacity .7s var(--ease), transform .7s var(--ease);
 }
-.card.is-visible{opacity:1; transform:none;}
+/* 카드는 기본이 '보임'이다. 등장 연출은 어디까지나 덤이라,
+   관찰자가 발동하지 않아도 작품이 사라지면 안 된다.
+   (opacity:0 을 기본값으로 두고 JS 가 클래스를 붙여야만 보이게 하면,
+    IntersectionObserver 가 한 번만 어긋나도 갤러리 전체가 빈 화면이 된다) */
+.card.is-visible{animation:card-in .6s var(--ease) backwards;}
+@keyframes card-in{ from{ opacity:0; transform:translateY(26px); } to{ opacity:1; transform:none; } }
+@media (prefers-reduced-motion:reduce){
+  .card.is-visible{animation:none;}
+}
 .card__frame{position:relative; width:100%; height:100%;}
 .card img{width:100%; height:100%; object-fit:cover; display:block; transition:transform .8s var(--ease);}
 .card:hover img{transform:scale(1.07);}
@@ -308,7 +315,7 @@ body.edit-mode .card__delete:hover{background:#ff4d4d; color:#fff;}
   aspect-ratio:1/1; display:none; align-items:center; justify-content:center; flex-direction:column; gap:8px;
   border:1px dashed var(--line); background:transparent; color:var(--fg-muted); cursor:pointer;
   font-family:var(--font-mono); font-size:12px;
-  transition:border-color .2s,color .2s,opacity .7s var(--ease),transform .7s var(--ease);
+  transition:border-color .2s,color .2s;
 }
 body.edit-mode .add-tile{display:flex;}
 .add-tile:hover{border-color:var(--accent); color:var(--accent);}
