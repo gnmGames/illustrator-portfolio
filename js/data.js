@@ -34,16 +34,11 @@ window.PORTFOLIO_DATA = [
   { id: "img-22", w: 1920, h: 2716, title: "습작", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
   { id: "img-12", w: 1920, h: 1924, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
   { id: "img-11", w: 1200, h: 1697, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
-  { id: "img-01", w: 1920, h: 1080, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
   { id: "img-02", w: 4770, h: 5325, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
   { id: "img-10", w: 5000, h: 5000, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
   { id: "img-25", w: 3852, h: 2124, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
-  { id: "img-04", w: 6988, h: 3883, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
   { id: "img-05", w: 10663, h: 7214, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
-  { id: "img-18", w: 1920, h: 1075, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
   { id: "img-19", w: 1920, h: 1511, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
   { id: "img-20", w: 1920, h: 1919, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
-  { id: "img-21", w: 1411, h: 1411, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
-  { id: "img-24", w: 5000, h: 2800, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" },
   { id: "img-28", w: 5333, h: 3000, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" }
 ];
