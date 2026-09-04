@@ -605,6 +605,14 @@ body.edit-mode .stage__video-edit{display:block;}
 }
 .card.is-playing .card__motion-video{display:block;}
 
+/* 재생용 GIF. `.card img` 가 display:block 을 걸고 있어서 클래스 하나로는
+   못 이긴다 — 그래서 .card 를 앞에 붙여 우선순위를 맞춘다. */
+.card .card__motion-gif{position:absolute; top:0; left:0; display:none; z-index:1;}
+.card.is-playing .card__motion-gif{display:block;}
+/* 재생 중에는 포스터를 감춘다. 알파가 있는 GIF 면 밑에 깔린 포스터가 비쳐
+   겹쳐 보인다. */
+.card.is-playing .card__frame > img:not(.card__motion-gif){visibility:hidden;}
+
 .card__motion-badge{
   position:absolute; left:8px; bottom:8px; z-index:3;
   padding:3px 7px; border-radius:2px;

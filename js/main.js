@@ -1282,12 +1282,6 @@
     el.style.top = (-sy / box * 100) + "%";
     el.style.objectFit = "fill";   /* 크기를 직접 정했으니 맞춰 늘리지 말 것 */
   }
-  function clearCropBox(el) {
-    el.style.position = "";
-    el.style.width = ""; el.style.height = "";
-    el.style.left = ""; el.style.top = "";
-    el.style.objectFit = "";
-  }
 
   /* 썸네일 호버 재생 */
   function attachMotionHover(card, item) {
@@ -1301,36 +1295,55 @@
 
     if (!window.matchMedia("(pointer:fine)").matches) return;   /* 터치기기엔 호버가 없다 */
 
-    var imgEl = frame.querySelector("img");
-    var vid = null;
-    card.addEventListener("mouseenter", function () {
-      if (item.motion === "gif") {
-        imgEl.src = motionSrc(item);      /* src 를 갈면 GIF 가 처음부터 재생된다 */
-        applyCropBox(imgEl, item);        /* 썸네일과 같은 자리가 재생되도록 */
-        return;
-      }
-      if (!vid) {
-        vid = document.createElement("video");
-        vid.className = "card__motion-video";
-        vid.muted = true; vid.loop = true; vid.playsInline = true; vid.preload = "none";
-        vid.src = motionSrc(item);
-        frame.appendChild(vid);
-        applyCropBox(vid, item);
-      }
+    /* 재생용 원본은 포스터와 별개의 요소로 둔다.
+       포스터가 든 <img> 의 src 를 갈아끼우면, 원본이 도착하기 전까지
+       정사각 포스터(720x720)가 원본 비율의 상자에 갇혀 늘어난 채 보이고
+       원본이 도착하는 순간 제자리를 찾으면서 화면이 튄다.
+       포스터는 그대로 두고, 다 받아온 뒤에만 원본을 그 위에 얹는다. */
+    var motionEl = null, ready = false, hovering = false;
+    var isGif = item.motion === "gif";
+
+    function reveal() {
+      if (!ready || !hovering) return;
       card.classList.add("is-playing");
-      var p = vid.play();
-      if (p && p.catch) p.catch(function () {});
+      if (!isGif) {
+        var p = motionEl.play();
+        if (p && p.catch) p.catch(function () {});
+      }
+    }
+
+    function ensureMotion() {
+      if (motionEl) return motionEl;
+      motionEl = document.createElement(isGif ? "img" : "video");
+      motionEl.className = isGif ? "card__motion-gif" : "card__motion-video";
+      if (isGif) {
+        motionEl.alt = "";
+        motionEl.decoding = "async";
+        motionEl.addEventListener("load", function () { ready = true; reveal(); });
+      } else {
+        motionEl.muted = true; motionEl.loop = true; motionEl.playsInline = true;
+        motionEl.preload = "auto";
+        motionEl.addEventListener("loadeddata", function () { ready = true; reveal(); });
+      }
+      frame.appendChild(motionEl);
+      applyCropBox(motionEl, item);     /* 썸네일로 지정한 그 자리 */
+      motionEl.src = motionSrc(item);
+      return motionEl;
+    }
+
+    card.addEventListener("mouseenter", function () {
+      hovering = true;
+      ensureMotion();
+      reveal();                         /* 이미 받아둔 뒤라면 곧바로 나온다 */
     });
     card.addEventListener("mouseleave", function () {
-      if (item.motion === "gif") {
-        imgEl.src = thumbSrc(item.id);    /* 포스터로 되돌리면 멈춘다 */
-        clearCropBox(imgEl);              /* 포스터는 이미 잘려 있다 */
-        return;
-      }
-      if (vid) {
-        vid.pause();
-        try { vid.currentTime = 0; } catch (e) {}
-        card.classList.remove("is-playing");
+      hovering = false;
+      card.classList.remove("is-playing");
+      /* GIF 는 받아둔 채로 남겨 둔다 — 다시 올렸을 때 기다리지 않도록.
+         영상은 멈춰서 소리 없는 재생이 계속되지 않게 한다. */
+      if (motionEl && !isGif) {
+        motionEl.pause();
+        try { motionEl.currentTime = 0; } catch (e) {}
       }
     });
   }
