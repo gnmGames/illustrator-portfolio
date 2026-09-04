@@ -66,6 +66,10 @@
     tokenCancelBtn: document.getElementById("tokenCancelBtn"),
     tokenForgetBtn: document.getElementById("tokenForgetBtn"),
     tokenBtn: document.getElementById("tokenBtn"),
+    parts: document.getElementById("parts"),
+    partBulk: document.getElementById("partBulk"),
+    partEdit: document.getElementById("partEdit"),
+    partPick: document.getElementById("partPick"),
   };
 
   var state = {
@@ -73,6 +77,7 @@
     meta: { siteName: "", tagline: "" },
     currentIndex: null,
     editMode: false,
+    filter: "",
   };
 
   var dragSrcIndex = null;
@@ -229,6 +234,7 @@
         cropY: typeof d.cropY === "number" ? d.cropY : 0.5,
         video: d.video || "",
         motion: d.motion || "",
+        part: d.part || "",
       };
     });
     var meta = Object.assign({ siteName: "", tagline: "" }, window.SITE_META || {});
@@ -242,7 +248,7 @@
 
     (raw.added || []).forEach(function (a) {
       if (!byId[a.id]) {
-        byId[a.id] = { id: a.id, w: a.w, h: a.h, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "", motion: "" };
+        byId[a.id] = { id: a.id, w: a.w, h: a.h, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "", motion: "", part: "" };
       }
     });
 
@@ -277,7 +283,7 @@
       var edits = {}, added = [];
       state.items.forEach(function (it) {
         var crop = normalizeCrop(it);
-        edits[it.id] = { title: it.title, category: it.category, year: it.year, description: it.description, cropScale: crop.scale, cropX: crop.x, cropY: crop.y, video: it.video || "", motion: it.motion || "" };
+        edits[it.id] = { title: it.title, category: it.category, year: it.year, description: it.description, cropScale: crop.scale, cropX: crop.x, cropY: crop.y, video: it.video || "", motion: it.motion || "", part: it.part || "" };
         if (!defaultIds[it.id]) added.push({ id: it.id, w: it.w, h: it.h });
       });
       var payload = {
@@ -301,7 +307,7 @@
     var edits = {}, added = [];
     state.items.forEach(function (it) {
       var crop = normalizeCrop(it);
-      edits[it.id] = { title: it.title, category: it.category, year: it.year, description: it.description, cropScale: crop.scale, cropX: crop.x, cropY: crop.y, video: it.video || "", motion: it.motion || "" };
+      edits[it.id] = { title: it.title, category: it.category, year: it.year, description: it.description, cropScale: crop.scale, cropX: crop.x, cropY: crop.y, video: it.video || "", motion: it.motion || "", part: it.part || "" };
       if (!defaultIds[it.id]) added.push({ id: it.id, w: it.w, h: it.h });
     });
     try {
@@ -335,13 +341,19 @@
   // ---------- rendering: grid ----------
   function renderGrid() {
     els.grid.innerHTML = "";
-    els.galleryCount.textContent = state.items.length;
+    var vis = visibleIndices();
+    els.galleryCount.textContent = vis.length;
     els.panelTotal.textContent = pad(state.items.length);
+    els.body.classList.toggle("is-filtered", !!state.filter);
+    renderParts();
 
-    state.items.forEach(function (item, idx) {
+    vis.forEach(function (idx, visPos) {
+      var item = state.items[idx];
       var card = document.createElement("div");
       card.className = "card";
       card.dataset.id = item.id;
+      card.dataset.abs = idx;
+      card.dataset.vis = visPos;
       card.draggable = true;
       if (idx === 0) card.classList.add("is-cover");
       if (state.currentIndex === idx) card.classList.add("is-active");
@@ -358,6 +370,10 @@
       var badge = document.createElement("span");
       badge.className = "card__cover-badge";
       badge.textContent = "COVER";
+
+      var partTag = document.createElement("span");
+      partTag.className = "card__part";
+      partTag.textContent = partLabel(item.part || "");
 
       var videoMark = document.createElement("span");
       videoMark.className = "card__video";
@@ -376,6 +392,7 @@
 
       frame.appendChild(img);
       frame.appendChild(badge);
+      frame.appendChild(partTag);
       frame.appendChild(videoMark);
       frame.appendChild(overlay);
 
@@ -384,14 +401,14 @@
       prevBtn.className = "card__move card__move--prev";
       prevBtn.textContent = "‹";
       prevBtn.setAttribute("aria-label", "앞으로 이동");
-      prevBtn.addEventListener("click", function (e) { e.stopPropagation(); moveTo(idx, idx - 1); });
+      prevBtn.addEventListener("click", function (e) { e.stopPropagation(); moveVisible(visPos, -1); });
 
       var nextBtn = document.createElement("button");
       nextBtn.type = "button";
       nextBtn.className = "card__move card__move--next";
       nextBtn.textContent = "›";
       nextBtn.setAttribute("aria-label", "뒤로 이동");
-      nextBtn.addEventListener("click", function (e) { e.stopPropagation(); moveTo(idx, idx + 1); });
+      nextBtn.addEventListener("click", function (e) { e.stopPropagation(); moveVisible(visPos, 1); });
 
       var deleteBtn = document.createElement("button");
       deleteBtn.type = "button";
@@ -409,7 +426,7 @@
       card.addEventListener("click", function () { openPiece(idx, { scroll: true }); });
 
       card.addEventListener("dragstart", function (e) {
-        dragSrcIndex = idx;
+        dragSrcIndex = visPos;
         card.classList.add("is-dragging");
         e.dataTransfer.effectAllowed = "move";
         try { e.dataTransfer.setData("text/plain", String(idx)); } catch (err) {}
@@ -430,8 +447,8 @@
         if (!state.editMode) return;
         e.preventDefault();
         clearDragOver();
-        if (dragSrcIndex === null || dragSrcIndex === idx) return;
-        moveTo(dragSrcIndex, idx);
+        if (dragSrcIndex === null || dragSrcIndex === visPos) return;
+        moveTo(visibleIndices()[dragSrcIndex], idx);
         dragSrcIndex = null;
       });
 
@@ -461,7 +478,7 @@
   }
 
   function updateCardCaption(idx) {
-    var card = els.grid.children[idx];
+    var card = cardByIndex(idx);
     if (!card) return;
     var item = state.items[idx];
     var titleEl = card.querySelector(".card__title");
@@ -472,7 +489,7 @@
   }
 
   function updateCardThumb(idx) {
-    var card = els.grid.children[idx];
+    var card = cardByIndex(idx);
     if (!card) return;
     var imgEl = card.querySelector(".card__frame > img");
     if (imgEl) imgEl.src = thumbSrc(state.items[idx].id);
@@ -555,7 +572,8 @@
               if (ext) put(id + ":motion", file);   /* 원본을 그대로 보관한다 */
               state.items.push({
                 id: id, w: w, h: h, title: "", category: "", year: "", description: "",
-                cropScale: 1, cropX: 0.5, cropY: 0.5, video: "", motion: ext
+                cropScale: 1, cropX: 0.5, cropY: 0.5, video: "", motion: ext,
+                part: state.filter          /* 지금 보고 있는 파트로 바로 들어간다 */
               });
               addedCount++;
               return Promise.all(writes);
@@ -669,16 +687,25 @@
 
   function step(dir) {
     if (state.currentIndex === null) return;
-    var n = state.items.length;
-    var next = (state.currentIndex + dir + n) % n;
-    openPiece(next, { scroll: true });
+    var vis = visibleIndices();
+    var at = vis.indexOf(state.currentIndex);
+    if (at === -1) { openPiece(vis[0], { scroll: true }); return; }
+    var next = (at + dir + vis.length) % vis.length;
+    openPiece(vis[next], { scroll: true });
   }
 
   function highlightActiveCard() {
-    var cards = els.grid.querySelectorAll(".card");
-    cards.forEach(function (card, i) {
-      card.classList.toggle("is-active", i === state.currentIndex);
+    els.grid.querySelectorAll(".card[data-abs]").forEach(function (card) {
+      card.classList.toggle("is-active", Number(card.dataset.abs) === state.currentIndex);
     });
+  }
+
+  /* 보이는 목록 안에서 한 칸 옮긴다 — 인접한 '보이는' 항목의 자리로 간다 */
+  function moveVisible(visPos, dir) {
+    var vis = visibleIndices();
+    var to = visPos + dir;
+    if (to < 0 || to >= vis.length) return;
+    moveTo(vis[visPos], vis[to]);
   }
 
   function setField(el, value, alwaysShow) {
@@ -695,6 +722,7 @@
     setField(els.panelYear, item.year, state.editMode);
     setField(els.panelDesc, item.description, state.editMode);
     els.cropEditBtn.style.display = item.w === item.h ? "none" : "";
+    renderPartPick();
 
     /* 같은 작품을 다시 그릴 때만 입력 중인 값을 보존한다.
        작품이 바뀌면 포커스가 있어도 무조건 새 값으로 덮어쓴다. */
@@ -775,7 +803,7 @@
   });
 
   function updateCardVideo(idx) {
-    var card = els.grid.children[idx];
+    var card = cardByIndex(idx);
     if (!card) return;
     card.classList.toggle("has-video", !!parseYouTubeId(state.items[idx].video));
   }
@@ -962,6 +990,17 @@
   bindEditable(els.panelYear, function (v) { if (state.currentIndex !== null) state.items[state.currentIndex].year = v; });
   bindEditable(els.panelDesc, function (v) { if (state.currentIndex !== null) state.items[state.currentIndex].description = v; });
 
+  Array.prototype.forEach.call(els.partPick.children, function (b) {
+    b.addEventListener("click", function () {
+      if (state.currentIndex === null) return;
+      state.items[state.currentIndex].part = b.dataset.part;
+      persist();
+      renderPartPick();
+      renderGrid();
+      flashStatus("파트를 " + partLabel(b.dataset.part) + "로 지정했습니다");
+    });
+  });
+
   els.brandName.addEventListener("click", function (e) { if (state.editMode) e.preventDefault(); });
 
   // ---------- export / reset ----------
@@ -972,7 +1011,8 @@
       ", year: " + JSON.stringify(it.year) + ", description: " + JSON.stringify(it.description) +
       ", cropScale: " + crop.scale + ", cropX: " + crop.x + ", cropY: " + crop.y +
       ", video: " + JSON.stringify(it.video || "") +
-      ", motion: " + JSON.stringify(it.motion || "") + " }";
+      ", motion: " + JSON.stringify(it.motion || "") +
+      ", part: " + JSON.stringify(it.part || "") + " }";
   }
 
   function buildDataFileText() {
@@ -1060,6 +1100,93 @@
     renderGrid();
     flashStatus("편집 내용을 초기화했습니다");
   });
+
+  // ---------- 파트 (일러스트 / 애니메이션 / 개발) ----------
+  var PARTS = [
+    { key: "",       label: "전체" },
+    { key: "illust", label: "일러스트" },
+    { key: "anim",   label: "애니메이션" },
+    { key: "dev",    label: "개발" }
+  ];
+  function partLabel(key) {
+    for (var i = 0; i < PARTS.length; i++) if (PARTS[i].key === key) return PARTS[i].label;
+    return "미분류";
+  }
+  /* 현재 탭에서 보이는 항목들의 '절대 인덱스' 목록 */
+  function visibleIndices() {
+    var out = [];
+    state.items.forEach(function (it, i) {
+      if (!state.filter || (it.part || "") === state.filter) out.push(i);
+    });
+    return out;
+  }
+  function cardByIndex(absIdx) {
+    return els.grid.querySelector('.card[data-abs="' + absIdx + '"]');
+  }
+
+  function renderParts() {
+    var counts = { "": state.items.length };
+    PARTS.forEach(function (p) { if (p.key) counts[p.key] = 0; });
+    var unassigned = 0;
+    state.items.forEach(function (it) {
+      var k = it.part || "";
+      if (k && counts[k] !== undefined) counts[k]++;
+      if (!k) unassigned++;
+    });
+
+    els.parts.innerHTML = "";
+    PARTS.forEach(function (p) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "parts__tab" + (state.filter === p.key ? " is-on" : "");
+      b.setAttribute("role", "tab");
+      b.setAttribute("aria-selected", state.filter === p.key ? "true" : "false");
+      b.dataset.part = p.key;
+      b.appendChild(document.createTextNode(p.label));
+      var n = document.createElement("span");
+      n.textContent = counts[p.key];
+      b.appendChild(n);
+      b.addEventListener("click", function () { setFilter(p.key); });
+      els.parts.appendChild(b);
+    });
+
+    /* 편집 중 특정 파트를 보고 있으면, 미분류를 한 번에 옮길 수 있게 한다 */
+    els.partBulk.textContent = "";
+    if (state.editMode && state.filter && unassigned) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "parts__bulk";
+      btn.textContent = "미분류 " + unassigned + "개를 " + partLabel(state.filter) + "로 옮기기";
+      btn.addEventListener("click", function () {
+        if (!window.confirm("파트가 지정되지 않은 " + unassigned + "개를 "
+            + partLabel(state.filter) + "로 옮길까요?")) return;
+        state.items.forEach(function (it) { if (!it.part) it.part = state.filter; });
+        persist();
+        renderGrid();
+        flashStatus(unassigned + "개를 " + partLabel(state.filter) + "로 옮겼습니다");
+      });
+      els.partBulk.appendChild(btn);
+    }
+  }
+
+  function setFilter(key) {
+    state.filter = key;
+    /* 열려 있는 작품이 이 탭에 없으면 커버로 돌아간다 */
+    if (state.currentIndex !== null) {
+      var cur = state.items[state.currentIndex];
+      if (key && (cur.part || "") !== key) showCover();
+    }
+    renderGrid();
+  }
+
+  function renderPartPick() {
+    var item = state.currentIndex === null ? null : state.items[state.currentIndex];
+    Array.prototype.forEach.call(els.partPick.children, function (b) {
+      var on = item && (item.part || "") === b.dataset.part;
+      b.classList.toggle("is-on", !!on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+  }
 
   // ---------- 모션 자산 (GIF / 영상) ----------
   /* 원본 파일은 그대로 보관하고 첫 프레임을 포스터(full/thumb webp)로 만든다.
