@@ -268,6 +268,9 @@ body.edit-mode .edit-hint{display:block;}
 .card__frame{position:relative; width:100%; height:100%;}
 .card img{width:100%; height:100%; object-fit:cover; display:block; transition:transform .8s var(--ease);}
 .card:hover img{transform:scale(1.07);}
+/* 재생 중에는 확대를 끈다. 크롭 좌표에 맞춰 앉혀 둔 요소를 그 중심 기준으로
+   확대하면 카드 중심과 어긋나서 보이는 자리가 밀린다. */
+.card.has-motion:hover img{transform:none;}
 .card.is-active{box-shadow:inset 0 0 0 2px var(--accent);}
 
 .card__overlay{
@@ -597,7 +600,7 @@ body.edit-mode .stage__video-edit{display:block;}
 
 /* 그리드 카드 안에서의 재생 */
 .card__motion-video{
-  position:absolute; inset:0; width:100%; height:100%;
+  position:absolute; top:0; left:0; width:100%; height:100%;
   object-fit:cover; display:none; background:#000; z-index:1;
 }
 .card.is-playing .card__motion-video{display:block;}

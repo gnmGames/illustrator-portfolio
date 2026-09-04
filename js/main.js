@@ -1257,6 +1257,38 @@
     }
   }
 
+  /* 썸네일로 잘라둔 그 사각형이 카드를 채우도록 미디어를 직접 앉힌다.
+     object-fit:cover 는 무조건 한가운데를 쓰기 때문에, 작가가 지정한 크롭 위치가
+     재생 순간 무시되고 엉뚱한 데가 보인다. makeThumbCanvas 의 계산을 그대로 옮긴다.
+
+       boxSide = min(w,h) * scale
+       sx = (w - boxSide) * cropX
+       sy = (h - boxSide) * cropY
+
+     카드 한 변을 100% 로 두고 비율로 환산하면 원본 픽셀 크기와 무관해진다 —
+     GIF 원본과 저장된 w/h 의 실제 해상도가 달라도 비율만 같으면 맞는다. */
+  function applyCropBox(el, item) {
+    var w = item.w, h = item.h;
+    if (!w || !h) return;
+    var crop = normalizeCrop(item);
+    var box = Math.min(w, h) * crop.scale;
+    if (!(box > 0)) return;
+    var sx = (w - box) * crop.x;
+    var sy = (h - box) * crop.y;
+    el.style.position = "absolute";
+    el.style.width = (w / box * 100) + "%";
+    el.style.height = (h / box * 100) + "%";
+    el.style.left = (-sx / box * 100) + "%";
+    el.style.top = (-sy / box * 100) + "%";
+    el.style.objectFit = "fill";   /* 크기를 직접 정했으니 맞춰 늘리지 말 것 */
+  }
+  function clearCropBox(el) {
+    el.style.position = "";
+    el.style.width = ""; el.style.height = "";
+    el.style.left = ""; el.style.top = "";
+    el.style.objectFit = "";
+  }
+
   /* 썸네일 호버 재생 */
   function attachMotionHover(card, item) {
     if (!item.motion) return;
@@ -1274,6 +1306,7 @@
     card.addEventListener("mouseenter", function () {
       if (item.motion === "gif") {
         imgEl.src = motionSrc(item);      /* src 를 갈면 GIF 가 처음부터 재생된다 */
+        applyCropBox(imgEl, item);        /* 썸네일과 같은 자리가 재생되도록 */
         return;
       }
       if (!vid) {
@@ -1282,6 +1315,7 @@
         vid.muted = true; vid.loop = true; vid.playsInline = true; vid.preload = "none";
         vid.src = motionSrc(item);
         frame.appendChild(vid);
+        applyCropBox(vid, item);
       }
       card.classList.add("is-playing");
       var p = vid.play();
@@ -1290,6 +1324,7 @@
     card.addEventListener("mouseleave", function () {
       if (item.motion === "gif") {
         imgEl.src = thumbSrc(item.id);    /* 포스터로 되돌리면 멈춘다 */
+        clearCropBox(imgEl);              /* 포스터는 이미 잘려 있다 */
         return;
       }
       if (vid) {
