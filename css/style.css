@@ -657,3 +657,11 @@ body.edit-mode .stage__part-edit{display:block;}
 }
 body.edit-mode .card__part{display:block;}
 body.edit-mode .card.is-cover .card__part{left:auto; right:40px;}
+
+
+/* ===== 파트 섹션 (탭 대신 아래로 쌓는다) ===== */
+.part-sec{margin-top:clamp(48px,7vh,88px);}
+.part-sec:first-child{margin-top:0;}
+.part-sec .grid{margin-top:26px;}
+.part-sec .gallery__head h2{font-size:clamp(1.5rem,2.6vw,2.1rem);}
+.parts__bulk-row{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px;}

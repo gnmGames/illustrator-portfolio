@@ -30,8 +30,6 @@
     arrowPrev: document.getElementById("arrowPrev"),
     arrowNext: document.getElementById("arrowNext"),
     gallery: document.getElementById("gallery"),
-    grid: document.getElementById("grid"),
-    galleryCount: document.getElementById("galleryCount"),
     footYear: document.getElementById("footYear"),
     exportBtn: document.getElementById("exportBtn"),
     exportImagesBtn: document.getElementById("exportImagesBtn"),
@@ -66,8 +64,7 @@
     tokenCancelBtn: document.getElementById("tokenCancelBtn"),
     tokenForgetBtn: document.getElementById("tokenForgetBtn"),
     tokenBtn: document.getElementById("tokenBtn"),
-    parts: document.getElementById("parts"),
-    partBulk: document.getElementById("partBulk"),
+    sections: document.getElementById("sections"),
     partEdit: document.getElementById("partEdit"),
     partPick: document.getElementById("partPick"),
   };
@@ -340,139 +337,195 @@
 
   // ---------- rendering: grid ----------
   function renderGrid() {
-    els.grid.innerHTML = "";
-    var vis = visibleIndices();
-    els.galleryCount.textContent = vis.length;
+    els.sections.innerHTML = "";
     els.panelTotal.textContent = pad(state.items.length);
-    els.body.classList.toggle("is-filtered", !!state.filter);
-    renderParts();
 
-    vis.forEach(function (idx, visPos) {
-      var item = state.items[idx];
-      var card = document.createElement("div");
-      card.className = "card";
-      card.dataset.id = item.id;
-      card.dataset.abs = idx;
-      card.dataset.vis = visPos;
-      card.draggable = true;
-      if (idx === 0) card.classList.add("is-cover");
-      if (state.currentIndex === idx) card.classList.add("is-active");
-      if (parseYouTubeId(item.video)) card.classList.add("has-video");
+    var groups = PART_SECTIONS.slice();
+    var loose = partIndices("");
+    if (loose.length) groups.push({ key: "", label: "미분류" });
 
-      var frame = document.createElement("div");
-      frame.className = "card__frame";
+    groups.forEach(function (g) {
+      var idxs = partIndices(g.key);
+      /* 빈 파트는 보는 사람에게 굳이 보여주지 않는다. 편집 중에는 올릴 자리가
+         필요하므로 남겨둔다. */
+      if (!idxs.length && !state.editMode) return;
 
-      var img = document.createElement("img");
-      img.src = thumbSrc(item.id);
-      img.loading = "lazy";
-      img.alt = displayTitle(item, idx);
+      var sec = document.createElement("section");
+      sec.className = "part-sec";
+      sec.id = "part-" + (g.key || "none");
+      sec.dataset.part = g.key;
 
-      var badge = document.createElement("span");
-      badge.className = "card__cover-badge";
-      badge.textContent = "COVER";
+      var head = document.createElement("div");
+      head.className = "gallery__head";
+      var h2 = document.createElement("h2");
+      h2.textContent = g.label;
+      var cnt = document.createElement("p");
+      cnt.className = "gallery__count";
+      cnt.textContent = idxs.length + " pieces";
+      head.appendChild(h2);
+      head.appendChild(cnt);
+      sec.appendChild(head);
 
-      var partTag = document.createElement("span");
-      partTag.className = "card__part";
-      partTag.textContent = partLabel(item.part || "");
+      if (g.key === "" && state.editMode) sec.appendChild(buildBulkRow(idxs.length));
 
-      var videoMark = document.createElement("span");
-      videoMark.className = "card__video";
-      videoMark.setAttribute("aria-hidden", "true");
+      var grid = document.createElement("div");
+      grid.className = "grid";
+      idxs.forEach(function (abs) { grid.appendChild(buildCard(abs, g.key)); });
+      grid.appendChild(buildAddTile(g.key));
+      sec.appendChild(grid);
 
-      var overlay = document.createElement("div");
-      overlay.className = "card__overlay";
-      var num = document.createElement("span");
-      num.className = "card__num";
-      num.textContent = pad(idx + 1);
-      var titleSpan = document.createElement("span");
-      titleSpan.className = "card__title";
-      titleSpan.textContent = displayTitle(item, idx);
-      overlay.appendChild(num);
-      overlay.appendChild(titleSpan);
-
-      frame.appendChild(img);
-      frame.appendChild(badge);
-      frame.appendChild(partTag);
-      frame.appendChild(videoMark);
-      frame.appendChild(overlay);
-
-      var prevBtn = document.createElement("button");
-      prevBtn.type = "button";
-      prevBtn.className = "card__move card__move--prev";
-      prevBtn.textContent = "‹";
-      prevBtn.setAttribute("aria-label", "앞으로 이동");
-      prevBtn.addEventListener("click", function (e) { e.stopPropagation(); moveVisible(visPos, -1); });
-
-      var nextBtn = document.createElement("button");
-      nextBtn.type = "button";
-      nextBtn.className = "card__move card__move--next";
-      nextBtn.textContent = "›";
-      nextBtn.setAttribute("aria-label", "뒤로 이동");
-      nextBtn.addEventListener("click", function (e) { e.stopPropagation(); moveVisible(visPos, 1); });
-
-      var deleteBtn = document.createElement("button");
-      deleteBtn.type = "button";
-      deleteBtn.className = "card__delete";
-      deleteBtn.textContent = "✕";
-      deleteBtn.setAttribute("aria-label", "삭제");
-      deleteBtn.addEventListener("click", function (e) { e.stopPropagation(); deleteItem(idx); });
-
-      card.appendChild(prevBtn);
-      card.appendChild(frame);
-      card.appendChild(nextBtn);
-      card.appendChild(deleteBtn);
-
-      attachMotionHover(card, item);
-      card.addEventListener("click", function () { openPiece(idx, { scroll: true }); });
-
-      card.addEventListener("dragstart", function (e) {
-        dragSrcIndex = visPos;
-        card.classList.add("is-dragging");
-        e.dataTransfer.effectAllowed = "move";
-        try { e.dataTransfer.setData("text/plain", String(idx)); } catch (err) {}
-      });
-      card.addEventListener("dragend", function () {
-        card.classList.remove("is-dragging");
-        clearDragOver();
-        dragSrcIndex = null;
-      });
-      card.addEventListener("dragover", function (e) {
-        if (!state.editMode) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
-        card.classList.add("drag-over");
-      });
-      card.addEventListener("dragleave", function () { card.classList.remove("drag-over"); });
-      card.addEventListener("drop", function (e) {
-        if (!state.editMode) return;
-        e.preventDefault();
-        clearDragOver();
-        if (dragSrcIndex === null || dragSrcIndex === visPos) return;
-        moveTo(visibleIndices()[dragSrcIndex], idx);
-        dragSrcIndex = null;
-      });
-
-      els.grid.appendChild(card);
+      els.sections.appendChild(sec);
     });
-
-    var addTile = document.createElement("button");
-    addTile.type = "button";
-    addTile.className = "card add-tile";
-    var plus = document.createElement("span");
-    plus.className = "add-tile__plus";
-    plus.textContent = "+";
-    var addLabel = document.createElement("span");
-    addLabel.textContent = "이미지 추가";
-    addTile.appendChild(plus);
-    addTile.appendChild(addLabel);
-    addTile.addEventListener("click", function () { els.fileInput.click(); });
-    els.grid.appendChild(addTile);
 
     observeCards();
   }
 
+  /* 미분류를 한 번에 옮기는 줄 (편집 모드 전용) */
+  function buildBulkRow(n) {
+    var row = document.createElement("p");
+    row.className = "parts__bulk-row";
+    PART_SECTIONS.forEach(function (p) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "parts__bulk";
+      b.textContent = "미분류 " + n + "개 → " + p.label;
+      b.addEventListener("click", function () {
+        if (!window.confirm("파트가 지정되지 않은 " + n + "개를 " + p.label + "로 옮길까요?")) return;
+        state.items.forEach(function (it) { if (!it.part) it.part = p.key; });
+        persist();
+        renderGrid();
+        flashStatus(n + "개를 " + p.label + "로 옮겼습니다");
+      });
+      row.appendChild(b);
+    });
+    return row;
+  }
+
+  function buildAddTile(partKey) {
+    var t = document.createElement("button");
+    t.type = "button";
+    t.className = "card add-tile";
+    var plus = document.createElement("span");
+    plus.className = "add-tile__plus";
+    plus.textContent = "+";
+    var label = document.createElement("span");
+    label.textContent = partLabel(partKey) + "에 추가";
+    t.appendChild(plus);
+    t.appendChild(label);
+    t.addEventListener("click", function () {
+      pendingPart = partKey;      /* 올린 파일이 이 파트로 들어간다 */
+      els.fileInput.click();
+    });
+    return t;
+  }
+
+  function buildCard(idx, partKey) {
+    var item = state.items[idx];
+    var card = document.createElement("div");
+    card.className = "card";
+    card.dataset.id = item.id;
+    card.dataset.abs = idx;
+    card.draggable = true;
+    if (idx === 0) card.classList.add("is-cover");
+    if (state.currentIndex === idx) card.classList.add("is-active");
+    if (parseYouTubeId(item.video)) card.classList.add("has-video");
+
+    var frame = document.createElement("div");
+    frame.className = "card__frame";
+
+    var img = document.createElement("img");
+    img.src = thumbSrc(item.id);
+    img.loading = "lazy";
+    img.alt = displayTitle(item, idx);
+
+    var badge = document.createElement("span");
+    badge.className = "card__cover-badge";
+    badge.textContent = "COVER";
+
+    var videoMark = document.createElement("span");
+    videoMark.className = "card__video";
+    videoMark.setAttribute("aria-hidden", "true");
+
+    var overlay = document.createElement("div");
+    overlay.className = "card__overlay";
+    var num = document.createElement("span");
+    num.className = "card__num";
+    num.textContent = pad(idx + 1);
+    var titleSpan = document.createElement("span");
+    titleSpan.className = "card__title";
+    titleSpan.textContent = displayTitle(item, idx);
+    overlay.appendChild(num);
+    overlay.appendChild(titleSpan);
+
+    frame.appendChild(img);
+    frame.appendChild(badge);
+    frame.appendChild(videoMark);
+    frame.appendChild(overlay);
+
+    var prevBtn = document.createElement("button");
+    prevBtn.type = "button";
+    prevBtn.className = "card__move card__move--prev";
+    prevBtn.textContent = "‹";
+    prevBtn.setAttribute("aria-label", "앞으로 이동");
+    prevBtn.addEventListener("click", function (e) { e.stopPropagation(); moveWithinPart(idx, -1, partKey); });
+
+    var nextBtn = document.createElement("button");
+    nextBtn.type = "button";
+    nextBtn.className = "card__move card__move--next";
+    nextBtn.textContent = "›";
+    nextBtn.setAttribute("aria-label", "뒤로 이동");
+    nextBtn.addEventListener("click", function (e) { e.stopPropagation(); moveWithinPart(idx, 1, partKey); });
+
+    var deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "card__delete";
+    deleteBtn.textContent = "✕";
+    deleteBtn.setAttribute("aria-label", "삭제");
+    deleteBtn.addEventListener("click", function (e) { e.stopPropagation(); deleteItem(idx); });
+
+    card.appendChild(prevBtn);
+    card.appendChild(frame);
+    card.appendChild(nextBtn);
+    card.appendChild(deleteBtn);
+
+    attachMotionHover(card, item);
+    card.addEventListener("click", function () { openPiece(idx, { scroll: true }); });
+
+    card.addEventListener("dragstart", function (e) {
+      dragSrcIndex = idx;
+      card.classList.add("is-dragging");
+      e.dataTransfer.effectAllowed = "move";
+      try { e.dataTransfer.setData("text/plain", String(idx)); } catch (err) {}
+    });
+    card.addEventListener("dragend", function () {
+      card.classList.remove("is-dragging");
+      clearDragOver();
+      dragSrcIndex = null;
+    });
+    card.addEventListener("dragover", function (e) {
+      if (!state.editMode) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      card.classList.add("drag-over");
+    });
+    card.addEventListener("dragleave", function () { card.classList.remove("drag-over"); });
+    card.addEventListener("drop", function (e) {
+      if (!state.editMode) return;
+      e.preventDefault();
+      clearDragOver();
+      if (dragSrcIndex === null || dragSrcIndex === idx) { dragSrcIndex = null; return; }
+      /* 파트를 가로지르는 드래그는 순서가 아니라 소속을 바꾸는 일이라 막는다.
+         파트 변경은 오른쪽 패널에서 한다. */
+      if ((state.items[dragSrcIndex].part || "") !== partKey) { dragSrcIndex = null; return; }
+      moveTo(dragSrcIndex, idx);
+      dragSrcIndex = null;
+    });
+
+    return card;
+  }
+
   function clearDragOver() {
-    Array.prototype.forEach.call(els.grid.querySelectorAll(".drag-over"), function (el) {
+    Array.prototype.forEach.call(els.sections.querySelectorAll(".drag-over"), function (el) {
       el.classList.remove("drag-over");
     });
   }
@@ -505,7 +558,7 @@
         }
       });
     }, { threshold: 0.12 });
-    var cards = els.grid.querySelectorAll(".card");
+    var cards = els.sections.querySelectorAll(".card");
     cards.forEach(function (card, i) {
       card.style.transitionDelay = (Math.min(i % 8, 8) * 45) + "ms";
       io.observe(card);
@@ -573,7 +626,7 @@
               state.items.push({
                 id: id, w: w, h: h, title: "", category: "", year: "", description: "",
                 cropScale: 1, cropX: 0.5, cropY: 0.5, video: "", motion: ext,
-                part: state.filter          /* 지금 보고 있는 파트로 바로 들어간다 */
+                part: pendingPart          /* "+" 를 누른 파트로 들어간다 */
               });
               addedCount++;
               return Promise.all(writes);
@@ -676,36 +729,28 @@
     applyVideo(item);
     fillPanel(item, idx);
     highlightActiveCard();
-    if (opts.scroll !== false) window.scrollTo({ top: 0, behavior: "smooth" });
+    if (opts.scroll !== false) els.stage.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function closePiece() {
     exitCropMode();
     showCover();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    els.stage.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function step(dir) {
     if (state.currentIndex === null) return;
-    var vis = visibleIndices();
-    var at = vis.indexOf(state.currentIndex);
-    if (at === -1) { openPiece(vis[0], { scroll: true }); return; }
-    var next = (at + dir + vis.length) % vis.length;
-    openPiece(vis[next], { scroll: true });
+    var list = partIndices(state.items[state.currentIndex].part || "");
+    var at = list.indexOf(state.currentIndex);
+    if (at === -1) return;
+    var next = (at + dir + list.length) % list.length;
+    openPiece(list[next], { scroll: true });
   }
 
   function highlightActiveCard() {
-    els.grid.querySelectorAll(".card[data-abs]").forEach(function (card) {
+    els.sections.querySelectorAll(".card[data-abs]").forEach(function (card) {
       card.classList.toggle("is-active", Number(card.dataset.abs) === state.currentIndex);
     });
-  }
-
-  /* 보이는 목록 안에서 한 칸 옮긴다 — 인접한 '보이는' 항목의 자리로 간다 */
-  function moveVisible(visPos, dir) {
-    var vis = visibleIndices();
-    var to = visPos + dir;
-    if (to < 0 || to >= vis.length) return;
-    moveTo(vis[visPos], vis[to]);
   }
 
   function setField(el, value, alwaysShow) {
@@ -1102,81 +1147,35 @@
   });
 
   // ---------- 파트 (일러스트 / 애니메이션 / 개발) ----------
-  var PARTS = [
-    { key: "",       label: "전체" },
+  /* 탭으로 감추지 않고 아래로 쌓는다. 펼치지 않아도 전부 보인다. */
+  var PART_SECTIONS = [
     { key: "illust", label: "일러스트" },
     { key: "anim",   label: "애니메이션" },
     { key: "dev",    label: "개발" }
   ];
+  var pendingPart = "";      /* "+" 를 누른 파트 — 올린 파일이 여기로 들어간다 */
+
   function partLabel(key) {
-    for (var i = 0; i < PARTS.length; i++) if (PARTS[i].key === key) return PARTS[i].label;
+    for (var i = 0; i < PART_SECTIONS.length; i++) {
+      if (PART_SECTIONS[i].key === key) return PART_SECTIONS[i].label;
+    }
     return "미분류";
   }
-  /* 현재 탭에서 보이는 항목들의 '절대 인덱스' 목록 */
-  function visibleIndices() {
+  function partIndices(part) {
     var out = [];
-    state.items.forEach(function (it, i) {
-      if (!state.filter || (it.part || "") === state.filter) out.push(i);
-    });
+    state.items.forEach(function (it, i) { if ((it.part || "") === part) out.push(i); });
     return out;
   }
   function cardByIndex(absIdx) {
-    return els.grid.querySelector('.card[data-abs="' + absIdx + '"]');
+    return els.sections.querySelector('.card[data-abs="' + absIdx + '"]');
   }
-
-  function renderParts() {
-    var counts = { "": state.items.length };
-    PARTS.forEach(function (p) { if (p.key) counts[p.key] = 0; });
-    var unassigned = 0;
-    state.items.forEach(function (it) {
-      var k = it.part || "";
-      if (k && counts[k] !== undefined) counts[k]++;
-      if (!k) unassigned++;
-    });
-
-    els.parts.innerHTML = "";
-    PARTS.forEach(function (p) {
-      var b = document.createElement("button");
-      b.type = "button";
-      b.className = "parts__tab" + (state.filter === p.key ? " is-on" : "");
-      b.setAttribute("role", "tab");
-      b.setAttribute("aria-selected", state.filter === p.key ? "true" : "false");
-      b.dataset.part = p.key;
-      b.appendChild(document.createTextNode(p.label));
-      var n = document.createElement("span");
-      n.textContent = counts[p.key];
-      b.appendChild(n);
-      b.addEventListener("click", function () { setFilter(p.key); });
-      els.parts.appendChild(b);
-    });
-
-    /* 편집 중 특정 파트를 보고 있으면, 미분류를 한 번에 옮길 수 있게 한다 */
-    els.partBulk.textContent = "";
-    if (state.editMode && state.filter && unassigned) {
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "parts__bulk";
-      btn.textContent = "미분류 " + unassigned + "개를 " + partLabel(state.filter) + "로 옮기기";
-      btn.addEventListener("click", function () {
-        if (!window.confirm("파트가 지정되지 않은 " + unassigned + "개를 "
-            + partLabel(state.filter) + "로 옮길까요?")) return;
-        state.items.forEach(function (it) { if (!it.part) it.part = state.filter; });
-        persist();
-        renderGrid();
-        flashStatus(unassigned + "개를 " + partLabel(state.filter) + "로 옮겼습니다");
-      });
-      els.partBulk.appendChild(btn);
-    }
-  }
-
-  function setFilter(key) {
-    state.filter = key;
-    /* 열려 있는 작품이 이 탭에 없으면 커버로 돌아간다 */
-    if (state.currentIndex !== null) {
-      var cur = state.items[state.currentIndex];
-      if (key && (cur.part || "") !== key) showCover();
-    }
-    renderGrid();
+  /* 같은 파트 안에서만 한 칸 옮긴다 */
+  function moveWithinPart(abs, dir, partKey) {
+    var list = partIndices(partKey);
+    var at = list.indexOf(abs);
+    var to = at + dir;
+    if (at === -1 || to < 0 || to >= list.length) return;
+    moveTo(abs, list[to]);
   }
 
   function renderPartPick() {
@@ -1461,7 +1460,7 @@
   els.stageClose.addEventListener("click", closePiece);
   els.editToggle.addEventListener("click", function () { setEditMode(!state.editMode); });
   els.scrollCue.addEventListener("click", function () { els.gallery.scrollIntoView({ behavior: "smooth" }); });
-  els.worksLink.addEventListener("click", function () { els.gallery.scrollIntoView({ behavior: "smooth" }); });
+  els.worksLink.addEventListener("click", function () { els.sections.scrollIntoView({ behavior: "smooth", block: "start" }); });
 
   document.addEventListener("keydown", function (e) {
     var active = document.activeElement;
