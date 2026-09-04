@@ -49,6 +49,7 @@
     cropCancelBtn: document.getElementById("cropCancelBtn"),
     cropApplyBtn: document.getElementById("cropApplyBtn"),
     cropZoomRange: document.getElementById("cropZoomRange"),
+    stageMotion: document.getElementById("stageMotion"),
     stageVideo: document.getElementById("stageVideo"),
     videoFacade: document.getElementById("videoFacade"),
     videoThumb: document.getElementById("videoThumb"),
@@ -78,6 +79,14 @@
   var io = null;
   var blobMap = {}; // "{id}:full" | "{id}:thumb" -> object URL
   var blobRaw = {}; // same key -> Blob
+
+  /* blobRaw 키("{id}:full|thumb|motion") -> 저장소 내 경로 */
+  function assetPath(key) {
+    var parts = key.split(":");
+    if (parts[1] !== "motion") return "assets/img/" + parts[1] + "/" + parts[0] + ".webp";
+    var it = state.items.filter(function (x) { return x.id === parts[0]; })[0];
+    return "assets/img/motion/" + parts[0] + "." + ((it && it.motion) || "gif");
+  }
 
   function pad(n) { return n < 10 ? "0" + n : "" + n; }
   function fullSrc(id) { return blobMap[id + ":full"] || ("assets/img/full/" + id + ".webp"); }
@@ -166,8 +175,11 @@
       canvas.toBlob(function (blob) { resolve(blob); }, "image/webp", quality || 0.85);
     });
   }
+  function srcW(el) { return el.naturalWidth || el.videoWidth || 0; }
+  function srcH(el) { return el.naturalHeight || el.videoHeight || 0; }
+
   function makeFullCanvas(imgEl, maxDim) {
-    var w = imgEl.naturalWidth, h = imgEl.naturalHeight;
+    var w = srcW(imgEl), h = srcH(imgEl);
     var scale = Math.min(1, maxDim / Math.max(w, h));
     var cw = Math.max(1, Math.round(w * scale)), ch = Math.max(1, Math.round(h * scale));
     var canvas = document.createElement("canvas");
@@ -183,7 +195,7 @@
     };
   }
   function makeThumbCanvas(imgEl, crop, size) {
-    var w = imgEl.naturalWidth, h = imgEl.naturalHeight;
+    var w = srcW(imgEl), h = srcH(imgEl);
     var minSide = Math.min(w, h);
     var boxSide = minSide * crop.scale;
     var sx = (w - boxSide) * crop.x;
@@ -216,6 +228,7 @@
         cropX: typeof d.cropX === "number" ? d.cropX : 0.5,
         cropY: typeof d.cropY === "number" ? d.cropY : 0.5,
         video: d.video || "",
+        motion: d.motion || "",
       };
     });
     var meta = Object.assign({ siteName: "", tagline: "" }, window.SITE_META || {});
@@ -229,7 +242,7 @@
 
     (raw.added || []).forEach(function (a) {
       if (!byId[a.id]) {
-        byId[a.id] = { id: a.id, w: a.w, h: a.h, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" };
+        byId[a.id] = { id: a.id, w: a.w, h: a.h, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "", motion: "" };
       }
     });
 
@@ -264,7 +277,7 @@
       var edits = {}, added = [];
       state.items.forEach(function (it) {
         var crop = normalizeCrop(it);
-        edits[it.id] = { title: it.title, category: it.category, year: it.year, description: it.description, cropScale: crop.scale, cropX: crop.x, cropY: crop.y, video: it.video || "" };
+        edits[it.id] = { title: it.title, category: it.category, year: it.year, description: it.description, cropScale: crop.scale, cropX: crop.x, cropY: crop.y, video: it.video || "", motion: it.motion || "" };
         if (!defaultIds[it.id]) added.push({ id: it.id, w: it.w, h: it.h });
       });
       var payload = {
@@ -288,7 +301,7 @@
     var edits = {}, added = [];
     state.items.forEach(function (it) {
       var crop = normalizeCrop(it);
-      edits[it.id] = { title: it.title, category: it.category, year: it.year, description: it.description, cropScale: crop.scale, cropX: crop.x, cropY: crop.y, video: it.video || "" };
+      edits[it.id] = { title: it.title, category: it.category, year: it.year, description: it.description, cropScale: crop.scale, cropX: crop.x, cropY: crop.y, video: it.video || "", motion: it.motion || "" };
       if (!defaultIds[it.id]) added.push({ id: it.id, w: it.w, h: it.h });
     });
     try {
@@ -392,6 +405,7 @@
       card.appendChild(nextBtn);
       card.appendChild(deleteBtn);
 
+      attachMotionHover(card, item);
       card.addEventListener("click", function () { openPiece(idx, { scroll: true }); });
 
       card.addEventListener("dragstart", function (e) {
@@ -501,34 +515,67 @@
 
   // ---------- add / delete ----------
   function handleFilesAdded(fileList) {
-    var files = Array.prototype.filter.call(fileList, function (f) { return /^image\//.test(f.type); });
+    var files = Array.prototype.filter.call(fileList, function (f) {
+      return /^image\//.test(f.type) || /^video\//.test(f.type);
+    });
     if (!files.length) return;
 
     var chain = Promise.resolve();
-    var addedCount = 0;
+    var addedCount = 0, failed = [];
+
     files.forEach(function (file) {
       chain = chain.then(function () {
-        return loadImageFile(file).then(function (img) {
-          var id = nextImageId();
-          var fullCanvas = makeFullCanvas(img, FULL_MAX);
-          var thumbCanvas = makeThumbCanvas(img, { scale: 1, x: 0.5, y: 0.5 }, THUMB_SIZE);
-          return Promise.all([canvasToWebp(fullCanvas, 0.85), canvasToWebp(thumbCanvas, 0.8)]).then(function (blobs) {
-            var fullBlob = blobs[0], thumbBlob = blobs[1];
-            var fullKey = id + ":full", thumbKey = id + ":thumb";
-            blobRaw[fullKey] = fullBlob; blobMap[fullKey] = URL.createObjectURL(fullBlob);
-            blobRaw[thumbKey] = thumbBlob; blobMap[thumbKey] = URL.createObjectURL(thumbBlob);
-            state.items.push({ id: id, w: img.naturalWidth, h: img.naturalHeight, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "" });
-            addedCount++;
-            return Promise.all([idbSet(fullKey, fullBlob), idbSet(thumbKey, thumbBlob)]);
-          });
-        }).catch(function (err) { console.error("이미지 추가 실패:", file.name, err); });
+        if (file.size > MOTION_MAX_BYTES) {
+          failed.push(file.name + " " + Math.round(file.size / 1048576) + "MB");
+          return;
+        }
+        var ext = motionExt(file);
+        var loading = /^video\//.test(file.type)
+          ? loadVideoFile(file)
+          : loadImageFile(file).then(function (img) { return { el: img, revoke: function () {} }; });
+
+        return loading.then(function (src) {
+          var el = src.el;
+          var w = srcW(el), h = srcH(el);
+          if (!w || !h) throw new Error("no frame");
+          var fullCanvas = makeFullCanvas(el, FULL_MAX);
+          var thumbCanvas = makeThumbCanvas(el, { scale: 1, x: 0.5, y: 0.5 }, THUMB_SIZE);
+          return Promise.all([canvasToWebp(fullCanvas, 0.85), canvasToWebp(thumbCanvas, 0.8)])
+            .then(function (blobs) {
+              src.revoke();
+              var id = nextImageId();
+              var writes = [];
+              function put(key, blob) {
+                blobRaw[key] = blob;
+                blobMap[key] = URL.createObjectURL(blob);
+                writes.push(idbSet(key, blob));
+              }
+              put(id + ":full", blobs[0]);
+              put(id + ":thumb", blobs[1]);
+              if (ext) put(id + ":motion", file);   /* 원본을 그대로 보관한다 */
+              state.items.push({
+                id: id, w: w, h: h, title: "", category: "", year: "", description: "",
+                cropScale: 1, cropX: 0.5, cropY: 0.5, video: "", motion: ext
+              });
+              addedCount++;
+              return Promise.all(writes);
+            });
+        }).catch(function (err) {
+          console.error("추가 실패:", file.name, err);
+          failed.push(file.name);
+        });
       });
     });
 
     chain.then(function () {
       persist();
       renderGrid();
-      flashStatus(addedCount + "개 이미지를 추가했습니다 — 준비되면 \"이미지 파일 내보내기\"로 저장하세요");
+      var msg = addedCount + "개를 추가했습니다";
+      if (failed.length) {
+        msg += " · 실패 " + failed.length + "개 (" + failed[0]
+             + (failed.length > 1 ? " 외" : "") + ") — 25MB 이하의 GIF·MP4·WebM 을 써주세요";
+      }
+      flashStatus(msg, failed.length ? "bad" : "");
     });
   }
 
@@ -541,7 +588,7 @@
     if (!window.confirm('"' + displayTitle(item, idx) + '" 작품을 삭제할까요? 이 동작은 되돌릴 수 없습니다.')) return;
 
     state.items.splice(idx, 1);
-    ["full", "thumb"].forEach(function (kind) {
+    ["full", "thumb", "motion"].forEach(function (kind) {
       var key = item.id + ":" + kind;
       if (blobRaw[key]) {
         idbDelete(key);
@@ -591,6 +638,7 @@
 
   function showCover() {
     state.currentIndex = null;
+    stopStageMotion();
     closeVideo();
     els.stage.classList.remove("has-video");
     els.stage.classList.remove("is-piece");
@@ -604,7 +652,9 @@
     state.currentIndex = idx;
     var item = state.items[idx];
     els.stage.classList.add("is-piece");
-    setStageImage(fullSrc(item.id));
+    /* GIF 는 <img> 가 직접 재생하므로 포스터 대신 원본을 건다 */
+    setStageImage(item.motion === "gif" ? motionSrc(item) : fullSrc(item.id));
+    applyMotion(item);
     applyVideo(item);
     fillPanel(item, idx);
     highlightActiveCard();
@@ -773,6 +823,8 @@
     var item = state.items[state.currentIndex];
     if (item.w === item.h) { flashStatus("정사각형 이미지는 썸네일 조정이 필요 없습니다"); return; }
     closeVideo();                      /* 크롭 중에는 영상 바를 숨기므로 재생도 멈춘다 */
+    els.stageMotion.pause();
+    if (item.motion === "gif") els.stageImage.src = fullSrc(item.id);   /* 움직이는 프레임 위에서 자를 수 없다 */
     cropSnapshot = normalizeCrop(item);
     els.stage.classList.add("is-cropping");
     els.cropZoomRange.value = String(Math.round(cropSnapshot.scale * 100));
@@ -789,6 +841,11 @@
     els.stage.classList.remove("is-cropping");
     cropDrag = null;
     cropSnapshot = null;
+    if (state.currentIndex !== null) {
+      var cur = state.items[state.currentIndex];
+      if (cur && cur.motion === "gif") els.stageImage.src = motionSrc(cur);
+      if (cur && isVideoMotion(cur)) { var pp = els.stageMotion.play(); if (pp && pp.catch) pp.catch(function(){}); }
+    }
   }
 
   els.cropBox.addEventListener("pointerdown", function (e) {
@@ -914,7 +971,8 @@
       ", title: " + JSON.stringify(it.title) + ", category: " + JSON.stringify(it.category) +
       ", year: " + JSON.stringify(it.year) + ", description: " + JSON.stringify(it.description) +
       ", cropScale: " + crop.scale + ", cropX: " + crop.x + ", cropY: " + crop.y +
-      ", video: " + JSON.stringify(it.video || "") + " }";
+      ", video: " + JSON.stringify(it.video || "") +
+      ", motion: " + JSON.stringify(it.motion || "") + " }";
   }
 
   function buildDataFileText() {
@@ -975,7 +1033,9 @@
     if (!keys.length) { flashStatus("내보낼 새 이미지 파일이 없습니다"); return; }
     keys.forEach(function (key) {
       var parts = key.split(":");
-      downloadBlob(blobRaw[key], parts[0] + "-" + parts[1] + ".webp");
+      downloadBlob(blobRaw[key], parts[1] === "motion"
+        ? parts[0] + "-motion." + assetPath(key).split(".").pop()
+        : parts[0] + "-" + parts[1] + ".webp");
     });
     flashStatus(keys.length + "개 이미지 파일을 내보냈습니다 — 파일명에서 -full/-thumb를 지우고 assets/img/full·thumb 폴더에 넣어주세요");
   });
@@ -1000,6 +1060,116 @@
     renderGrid();
     flashStatus("편집 내용을 초기화했습니다");
   });
+
+  // ---------- 모션 자산 (GIF / 영상) ----------
+  /* 원본 파일은 그대로 보관하고 첫 프레임을 포스터(full/thumb webp)로 만든다.
+     평소에는 포스터를 보여주고 호버·상세에서만 재생한다 — 그리드 수십 칸이
+     한꺼번에 재생되면 브라우저가 버티지 못한다. */
+  var MOTION_MAX_BYTES = 25 * 1024 * 1024;
+
+  function motionExt(file) {
+    if (file.type === "image/gif") return "gif";
+    if (file.type === "video/mp4") return "mp4";
+    if (file.type === "video/webm") return "webm";
+    if (/^video\//.test(file.type)) {
+      var m = /\.([a-z0-9]+)$/i.exec(file.name || "");
+      return m ? m[1].toLowerCase() : "mp4";
+    }
+    return "";
+  }
+  function motionSrc(item) {
+    if (!item || !item.motion) return "";
+    return blobMap[item.id + ":motion"] || ("assets/img/motion/" + item.id + "." + item.motion);
+  }
+  function isVideoMotion(item) { return !!item && !!item.motion && item.motion !== "gif"; }
+
+  /* 영상에서 포스터로 쓸 프레임을 뽑는다 */
+  function loadVideoFile(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var v = document.createElement("video");
+      var done = false;
+      function finish() {
+        if (done) return;
+        done = true;
+        resolve({ el: v, revoke: function () { URL.revokeObjectURL(url); } });
+      }
+      v.muted = true; v.playsInline = true; v.preload = "auto";
+      v.onloadeddata = function () {
+        /* 0초는 검은 프레임인 경우가 많아 살짝 뒤로 옮긴다 */
+        try { v.currentTime = Math.min(0.1, (v.duration || 1) / 10); } catch (e) { finish(); }
+      };
+      v.onseeked = finish;
+      v.onerror = function () { URL.revokeObjectURL(url); reject(new Error("decode")); };
+      v.src = url;
+      setTimeout(finish, 4000);   /* seeked 가 오지 않는 브라우저 대비 */
+    });
+  }
+
+  /* 상세 화면 재생 */
+  function stopStageMotion() {
+    var v = els.stageMotion;
+    if (v.getAttribute("src")) {
+      v.pause();
+      v.removeAttribute("src");
+      v.load();          /* src 만 지우면 버퍼가 남아 계속 재생되는 브라우저가 있다 */
+    }
+    els.stage.classList.remove("is-motion");
+  }
+  function applyMotion(item) {
+    if (!item || !item.motion) { stopStageMotion(); return; }
+    if (isVideoMotion(item)) {
+      els.stageMotion.src = motionSrc(item);
+      els.stage.classList.add("is-motion");
+      var p = els.stageMotion.play();
+      if (p && p.catch) p.catch(function () {});   /* 막혀도 컨트롤로 재생 가능 */
+    } else {
+      stopStageMotion();   /* GIF 는 <img> 가 직접 재생한다 */
+    }
+  }
+
+  /* 썸네일 호버 재생 */
+  function attachMotionHover(card, item) {
+    if (!item.motion) return;
+    card.classList.add("has-motion");
+    var frame = card.querySelector(".card__frame");
+    var badge = document.createElement("span");
+    badge.className = "card__motion-badge";
+    badge.textContent = item.motion.toUpperCase();
+    frame.appendChild(badge);
+
+    if (!window.matchMedia("(pointer:fine)").matches) return;   /* 터치기기엔 호버가 없다 */
+
+    var imgEl = frame.querySelector("img");
+    var vid = null;
+    card.addEventListener("mouseenter", function () {
+      if (item.motion === "gif") {
+        imgEl.src = motionSrc(item);      /* src 를 갈면 GIF 가 처음부터 재생된다 */
+        return;
+      }
+      if (!vid) {
+        vid = document.createElement("video");
+        vid.className = "card__motion-video";
+        vid.muted = true; vid.loop = true; vid.playsInline = true; vid.preload = "none";
+        vid.src = motionSrc(item);
+        frame.appendChild(vid);
+      }
+      card.classList.add("is-playing");
+      var p = vid.play();
+      if (p && p.catch) p.catch(function () {});
+    });
+    card.addEventListener("mouseleave", function () {
+      if (item.motion === "gif") {
+        imgEl.src = thumbSrc(item.id);    /* 포스터로 되돌리면 멈춘다 */
+        return;
+      }
+      if (vid) {
+        vid.pause();
+        try { vid.currentTime = 0; } catch (e) {}
+        card.classList.remove("is-playing");
+      }
+    });
+  }
 
   // ---------- 사이트에 저장 (GitHub Git Data API) ----------
   /* data.js 와 새/재크롭 이미지를 커밋 하나로 한 번에 올린다.
@@ -1098,9 +1268,8 @@
                 return ghApi("POST", "/git/blobs", token, { content: b64, encoding: "base64" });
               })
               .then(function (blob) {
-                var parts = key.split(":");   /* [id, "full"|"thumb"] */
                 tree.push({
-                  path: "assets/img/" + parts[1] + "/" + parts[0] + ".webp",
+                  path: assetPath(key),
                   mode: "100644", type: "blob", sha: blob.sha
                 });
               });

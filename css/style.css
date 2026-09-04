@@ -264,7 +264,7 @@ body.edit-mode .edit-hint{display:block;}
 .card.is-active{box-shadow:inset 0 0 0 2px var(--accent);}
 
 .card__overlay{
-  position:absolute; left:0; right:0; bottom:0; padding:14px 16px;
+  position:absolute; left:0; right:0; bottom:0; padding:14px 16px; z-index:2;
   background:linear-gradient(to top, rgba(0,0,0,.78), rgba(0,0,0,0) 80%);
   display:flex; justify-content:space-between; align-items:flex-end; gap:10px;
   opacity:0; transform:translateY(6px); transition:opacity .3s var(--ease), transform .3s var(--ease);
@@ -572,3 +572,34 @@ body.edit-mode .stage__video-edit{display:block;}
 @media (max-width:720px){
   .stage__keyhint{display:none;}   /* 터치 기기에서는 안내할 키가 없다 */
 }
+
+
+/* ===== 모션 작품 (GIF / 영상) ===== */
+/* 평소에는 포스터(정지 이미지)를 보여주고, 호버·상세에서만 재생한다. */
+.stage__motion{
+  width:100%; height:100%; display:none; object-fit:contain; background:#000;
+}
+.stage.is-motion .stage__motion{display:block;}
+.stage.is-motion .stage__image{display:none;}
+.stage.is-piece.has-video .stage__motion{flex:1 1 auto; min-height:0; height:auto;}
+
+/* 크롭 중에는 포스터를 다시 꺼내 보여준다 — 크롭 좌표는 이미지 기준이다 */
+.stage.is-cropping .stage__motion{display:none;}
+.stage.is-cropping.is-motion .stage__image{display:block;}
+
+/* 그리드 카드 안에서의 재생 */
+.card__motion-video{
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover; display:none; background:#000; z-index:1;
+}
+.card.is-playing .card__motion-video{display:block;}
+
+.card__motion-badge{
+  position:absolute; left:8px; bottom:8px; z-index:3;
+  padding:3px 7px; border-radius:2px;
+  font-family:var(--font-mono); font-size:9.5px; letter-spacing:.1em;
+  background:rgba(11,11,12,.72); border:1px solid var(--line); color:var(--fg);
+  display:none;
+}
+.card.has-motion .card__motion-badge{display:block;}
+.card.has-motion:hover .card__motion-badge{border-color:var(--accent); color:var(--accent);}
