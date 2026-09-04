@@ -8,6 +8,15 @@
   var FULL_MAX = 2200;
   var THUMB_SIZE = 720;
 
+  /* 파트는 반드시 셋 중 하나다. 값이 없거나 모르는 값이면 일러스트로 본다.
+     어느 파트에도 속하지 않는 작품이 생기면 그리는 섹션이 없어서 화면에서
+     그대로 사라진다 — 기본값을 두는 이유는 편의가 아니라 안전장치다. */
+  var PART_KEYS = ["illust", "anim", "dev"];
+  var DEFAULT_PART = "illust";
+  function normalizePart(p) {
+    return PART_KEYS.indexOf(p) >= 0 ? p : DEFAULT_PART;
+  }
+
   var els = {
     body: document.body,
     brandName: document.getElementById("brandName"),
@@ -231,7 +240,7 @@
         cropY: typeof d.cropY === "number" ? d.cropY : 0.5,
         video: d.video || "",
         motion: d.motion || "",
-        part: d.part || "",
+        part: normalizePart(d.part),
       };
     });
     var meta = Object.assign({ siteName: "", tagline: "" }, window.SITE_META || {});
@@ -245,7 +254,7 @@
 
     (raw.added || []).forEach(function (a) {
       if (!byId[a.id]) {
-        byId[a.id] = { id: a.id, w: a.w, h: a.h, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "", motion: "", part: "" };
+        byId[a.id] = { id: a.id, w: a.w, h: a.h, title: "", category: "", year: "", description: "", cropScale: 1, cropX: 0.5, cropY: 0.5, video: "", motion: "", part: DEFAULT_PART };
       }
     });
 
@@ -267,6 +276,10 @@
 
     if (raw.meta) meta = Object.assign(meta, raw.meta);
 
+    /* 편집본을 덮어쓴 뒤 마지막으로 한 번 더 — 예전 저장본에는 part:"" 가
+       들어 있어서 Object.assign 이 위에서 잡아둔 기본값을 되돌려 놓는다. */
+    items.forEach(function (it) { it.part = normalizePart(it.part); });
+
     return { items: items, meta: meta };
   }
 
@@ -280,7 +293,7 @@
       var edits = {}, added = [];
       state.items.forEach(function (it) {
         var crop = normalizeCrop(it);
-        edits[it.id] = { title: it.title, category: it.category, year: it.year, description: it.description, cropScale: crop.scale, cropX: crop.x, cropY: crop.y, video: it.video || "", motion: it.motion || "", part: it.part || "" };
+        edits[it.id] = { title: it.title, category: it.category, year: it.year, description: it.description, cropScale: crop.scale, cropX: crop.x, cropY: crop.y, video: it.video || "", motion: it.motion || "", part: normalizePart(it.part) };
         if (!defaultIds[it.id]) added.push({ id: it.id, w: it.w, h: it.h });
       });
       var payload = {
@@ -304,7 +317,7 @@
     var edits = {}, added = [];
     state.items.forEach(function (it) {
       var crop = normalizeCrop(it);
-      edits[it.id] = { title: it.title, category: it.category, year: it.year, description: it.description, cropScale: crop.scale, cropX: crop.x, cropY: crop.y, video: it.video || "", motion: it.motion || "", part: it.part || "" };
+      edits[it.id] = { title: it.title, category: it.category, year: it.year, description: it.description, cropScale: crop.scale, cropX: crop.x, cropY: crop.y, video: it.video || "", motion: it.motion || "", part: normalizePart(it.part) };
       if (!defaultIds[it.id]) added.push({ id: it.id, w: it.w, h: it.h });
     });
     try {
@@ -340,11 +353,7 @@
     els.sections.innerHTML = "";
     els.panelTotal.textContent = pad(state.items.length);
 
-    var groups = PART_SECTIONS.slice();
-    var loose = partIndices("");
-    if (loose.length) groups.push({ key: "", label: "미분류" });
-
-    groups.forEach(function (g) {
+    PART_SECTIONS.forEach(function (g) {
       var idxs = partIndices(g.key);
       /* 빈 파트는 보는 사람에게 굳이 보여주지 않는다. 편집 중에는 올릴 자리가
          필요하므로 남겨둔다. */
@@ -352,7 +361,7 @@
 
       var sec = document.createElement("section");
       sec.className = "part-sec";
-      sec.id = "part-" + (g.key || "none");
+      sec.id = "part-" + g.key;
       sec.dataset.part = g.key;
 
       var head = document.createElement("div");
@@ -366,8 +375,6 @@
       head.appendChild(cnt);
       sec.appendChild(head);
 
-      if (g.key === "" && state.editMode) sec.appendChild(buildBulkRow(idxs.length));
-
       var grid = document.createElement("div");
       grid.className = "grid";
       idxs.forEach(function (abs) { grid.appendChild(buildCard(abs, g.key)); });
@@ -378,27 +385,6 @@
     });
 
     observeCards();
-  }
-
-  /* 미분류를 한 번에 옮기는 줄 (편집 모드 전용) */
-  function buildBulkRow(n) {
-    var row = document.createElement("p");
-    row.className = "parts__bulk-row";
-    PART_SECTIONS.forEach(function (p) {
-      var b = document.createElement("button");
-      b.type = "button";
-      b.className = "parts__bulk";
-      b.textContent = "미분류 " + n + "개 → " + p.label;
-      b.addEventListener("click", function () {
-        if (!window.confirm("파트가 지정되지 않은 " + n + "개를 " + p.label + "로 옮길까요?")) return;
-        state.items.forEach(function (it) { if (!it.part) it.part = p.key; });
-        persist();
-        renderGrid();
-        flashStatus(n + "개를 " + p.label + "로 옮겼습니다");
-      });
-      row.appendChild(b);
-    });
-    return row;
   }
 
   function buildAddTile(partKey) {
@@ -626,7 +612,7 @@
               state.items.push({
                 id: id, w: w, h: h, title: "", category: "", year: "", description: "",
                 cropScale: 1, cropX: 0.5, cropY: 0.5, video: "", motion: ext,
-                part: pendingPart          /* "+" 를 누른 파트로 들어간다 */
+                part: normalizePart(pendingPart)   /* "+" 를 누른 파트로 들어간다 */
               });
               addedCount++;
               return Promise.all(writes);
@@ -1057,7 +1043,7 @@
       ", cropScale: " + crop.scale + ", cropX: " + crop.x + ", cropY: " + crop.y +
       ", video: " + JSON.stringify(it.video || "") +
       ", motion: " + JSON.stringify(it.motion || "") +
-      ", part: " + JSON.stringify(it.part || "") + " }";
+      ", part: " + JSON.stringify(normalizePart(it.part)) + " }";
   }
 
   function buildDataFileText() {
@@ -1153,13 +1139,13 @@
     { key: "anim",   label: "애니메이션" },
     { key: "dev",    label: "개발" }
   ];
-  var pendingPart = "";      /* "+" 를 누른 파트 — 올린 파일이 여기로 들어간다 */
+  var pendingPart = DEFAULT_PART;   /* "+" 를 누른 파트 — 올린 파일이 여기로 들어간다 */
 
   function partLabel(key) {
     for (var i = 0; i < PART_SECTIONS.length; i++) {
       if (PART_SECTIONS[i].key === key) return PART_SECTIONS[i].label;
     }
-    return "미분류";
+    return "일러스트";
   }
   function partIndices(part) {
     var out = [];
