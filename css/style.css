@@ -484,3 +484,7 @@ body.edit-mode .stage__video-edit{display:block;}
   .stage.is-video-open .vframe{max-width:100%;}
   .vfacade__thumb{width:84px;}
 }
+
+/* 크롭 중에는 영상 바를 숨긴다 — 숨겨야 이미지가 원래 크기로 돌아와
+   크롭 박스가 실제 이미지와 정확히 겹친다 (.stage__video-edit 와 동일한 처리) */
+.stage.is-piece.is-cropping .stage__video{display:none;}

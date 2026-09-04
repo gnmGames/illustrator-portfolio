@@ -638,9 +638,12 @@
     setField(els.panelDesc, item.description, state.editMode);
     els.cropEditBtn.style.display = item.w === item.h ? "none" : "";
 
-    if (document.activeElement !== els.videoUrlInput) {
+    /* 같은 작품을 다시 그릴 때만 입력 중인 값을 보존한다.
+       작품이 바뀌면 포커스가 있어도 무조건 새 값으로 덮어쓴다. */
+    if (videoInputItemId !== item.id || document.activeElement !== els.videoUrlInput) {
       els.videoUrlInput.value = item.video || "";
     }
+    videoInputItemId = item.id;
     var vid = parseYouTubeId(item.video);
     els.videoStatus.textContent = !item.video
       ? ""
@@ -658,6 +661,8 @@
     var m = v.match(/(?:youtube\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
     return m ? m[1] : "";
   }
+
+  var videoInputItemId = null;
 
   function closeVideo() {
     els.stage.classList.remove("is-video-open");
@@ -719,29 +724,22 @@
 
   // ---------- thumbnail crop ----------
   function computeImageScreenRect() {
+    /* 패딩에서 역산하지 말고 이미지 엘리먼트의 실제 박스를 쓴다.
+       영상 바가 붙으면 이미지가 flex 로 줄어드는데, 패딩 역산은 그걸 못 본다. */
     var mediaRect = els.stageMedia.getBoundingClientRect();
-    var cs = getComputedStyle(els.stageMedia);
-    var padLeft = parseFloat(cs.paddingLeft) || 0;
-    var padRight = parseFloat(cs.paddingRight) || 0;
-    var padTop = parseFloat(cs.paddingTop) || 0;
-    var padBottom = parseFloat(cs.paddingBottom) || 0;
-    var contentLeft = mediaRect.left + padLeft;
-    var contentTop = mediaRect.top + padTop;
-    var contentWidth = mediaRect.width - padLeft - padRight;
-    var contentHeight = mediaRect.height - padTop - padBottom;
-
+    var box = els.stageImage.getBoundingClientRect();
     var nw = els.stageImage.naturalWidth, nh = els.stageImage.naturalHeight;
-    if (!nw || !nh || contentWidth <= 0 || contentHeight <= 0) return null;
-    var scale = Math.min(contentWidth / nw, contentHeight / nh);
+    if (!nw || !nh || box.width <= 0 || box.height <= 0) return null;
+    var scale = Math.min(box.width / nw, box.height / nh);
     var rw = nw * scale, rh = nh * scale;
     return {
-      left: contentLeft + (contentWidth - rw) / 2,
-      top: contentTop + (contentHeight - rh) / 2,
+      left: box.left + (box.width - rw) / 2,
+      top: box.top + (box.height - rh) / 2,
       width: rw, height: rh, mediaRect: mediaRect,
     };
   }
 
-  var MIN_CROP_SCALE = 0.2;
+  var MIN_CROP_SCALE = 0.2;   /* 슬라이더 최소 배율 (index.html 의 min=20 과 짝) */
 
   function positionCropBox() {
     var rect = computeImageScreenRect();
@@ -766,6 +764,7 @@
     if (state.currentIndex === null) return;
     var item = state.items[state.currentIndex];
     if (item.w === item.h) { flashStatus("정사각형 이미지는 썸네일 조정이 필요 없습니다"); return; }
+    closeVideo();                      /* 크롭 중에는 영상 바를 숨기므로 재생도 멈춘다 */
     cropSnapshot = normalizeCrop(item);
     els.stage.classList.add("is-cropping");
     els.cropZoomRange.value = String(Math.round(cropSnapshot.scale * 100));
@@ -980,6 +979,8 @@
     state.items = loaded.items;
     state.meta = loaded.meta;
     state.currentIndex = null;
+    closeVideo();
+    els.stage.classList.remove("has-video");
     els.stage.classList.remove("is-piece");
     exitCropMode();
     renderMeta();
@@ -1005,6 +1006,11 @@
       if (e.key === "Escape") exitCropMode();
       return;
     }
+    /* 폼 입력 중에는 방향키·Esc 를 가로채지 않는다.
+       URL 칸에서 캐럿을 옮기려다 작품이 넘어가면, 이전 작품의 주소가
+       그대로 남아 다음 타이핑에 엉뚱한 작품으로 저장된다. */
+    var tag = active && active.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
     if (e.key === "Escape" && state.currentIndex !== null) closePiece();
     if (e.key === "ArrowLeft") step(-1);
     if (e.key === "ArrowRight") step(1);
