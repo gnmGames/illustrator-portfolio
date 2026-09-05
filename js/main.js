@@ -395,7 +395,7 @@
     plus.className = "add-tile__plus";
     plus.textContent = "+";
     var label = document.createElement("span");
-    label.textContent = partLabel(partKey) + "에 추가";
+    label.textContent = "Add to " + partLabel(partKey);
     t.appendChild(plus);
     t.appendChild(label);
     t.addEventListener("click", function () {
@@ -452,21 +452,21 @@
     prevBtn.type = "button";
     prevBtn.className = "card__move card__move--prev";
     prevBtn.textContent = "‹";
-    prevBtn.setAttribute("aria-label", "앞으로 이동");
+    prevBtn.setAttribute("aria-label", "Move earlier");
     prevBtn.addEventListener("click", function (e) { e.stopPropagation(); moveWithinPart(idx, -1, partKey); });
 
     var nextBtn = document.createElement("button");
     nextBtn.type = "button";
     nextBtn.className = "card__move card__move--next";
     nextBtn.textContent = "›";
-    nextBtn.setAttribute("aria-label", "뒤로 이동");
+    nextBtn.setAttribute("aria-label", "Move later");
     nextBtn.addEventListener("click", function (e) { e.stopPropagation(); moveWithinPart(idx, 1, partKey); });
 
     var deleteBtn = document.createElement("button");
     deleteBtn.type = "button";
     deleteBtn.className = "card__delete";
     deleteBtn.textContent = "✕";
-    deleteBtn.setAttribute("aria-label", "삭제");
+    deleteBtn.setAttribute("aria-label", "Delete");
     deleteBtn.addEventListener("click", function (e) { e.stopPropagation(); deleteItem(idx); });
 
     card.appendChild(prevBtn);
@@ -620,7 +620,7 @@
               return Promise.all(writes);
             });
         }).catch(function (err) {
-          console.error("추가 실패:", file.name, err);
+          console.error("Failed to add:", file.name, err);
           failed.push(file.name);
         });
       });
@@ -629,15 +629,15 @@
     chain.then(function () {
       persist();
       renderGrid();
-      var msg = addedCount + "개를 추가했습니다";
+      var msg = "Added " + addedCount + (addedCount === 1 ? " file" : " files");
       if (heavy.length) {
-        msg += " · " + heavy[0] + (heavy.length > 1 ? " 외 " + (heavy.length - 1) + "개" : "")
-             + "는 용량이 커서 저장과 로딩이 오래 걸립니다";
+        msg += " · " + heavy[0] + (heavy.length > 1 ? " and " + (heavy.length - 1) + " more" : "")
+             + " is large — saving and loading will be slow";
       }
       if (failed.length) {
-        msg += " · 실패 " + failed.length + "개 (" + failed[0]
-             + (failed.length > 1 ? " 외" : "") + ") — 한 파일 70MB 까지만 올라갑니다"
-             + " (GitHub 한도). GIF 보다 MP4·WebM 이 훨씬 작습니다";
+        msg += " · " + failed.length + " failed (" + failed[0]
+             + (failed.length > 1 ? " and more" : "") + ") — 70MB per file max (GitHub limit)."
+             + " MP4/WebM is far smaller than GIF for the same motion";
       }
       flashStatus(msg, failed.length ? "bad" : (heavy.length ? "warn" : ""));
     });
@@ -645,11 +645,11 @@
 
   function deleteItem(idx) {
     if (state.items.length <= 1) {
-      window.alert("최소 1개의 이미지는 남아있어야 합니다.");
+      window.alert("At least one piece must remain.");
       return;
     }
     var item = state.items[idx];
-    if (!window.confirm('"' + displayTitle(item, idx) + '" 작품을 삭제할까요? 이 동작은 되돌릴 수 없습니다.')) return;
+    if (!window.confirm('Delete "' + displayTitle(item, idx) + '"? This cannot be undone.')) return;
 
     state.items.splice(idx, 1);
     ["full", "thumb", "motion"].forEach(function (kind) {
@@ -671,7 +671,7 @@
     persist();
     renderGrid();
     if (state.currentIndex !== null) fillPanel(state.items[state.currentIndex], state.currentIndex);
-    flashStatus("작품을 삭제했습니다");
+    flashStatus("Deleted.");
   }
 
   els.fileInput.addEventListener("change", function () {
@@ -771,7 +771,7 @@
     var vid = parseYouTubeId(item.video);
     els.videoStatus.textContent = !item.video
       ? ""
-      : (vid ? "영상 연결됨 · " + vid : "YouTube 주소를 인식하지 못했습니다");
+      : (vid ? "Video linked · " + vid : "Not a valid YouTube URL");
     els.videoStatus.classList.toggle("is-bad", !!item.video && !vid);
   }
 
@@ -812,7 +812,7 @@
     if (!id) return;
     var frame = document.createElement("iframe");
     frame.src = "https://www.youtube-nocookie.com/embed/" + id + "?autoplay=1&rel=0&modestbranding=1";
-    frame.title = "제작 과정 영상";
+    frame.title = "Process video";
     frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
     frame.setAttribute("allowfullscreen", "");
     frame.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
@@ -833,7 +833,7 @@
     var id = parseYouTubeId(item.video);
     els.videoStatus.textContent = !item.video
       ? ""
-      : (id ? "영상 연결됨 · " + id : "YouTube 주소를 인식하지 못했습니다");
+      : (id ? "Video linked · " + id : "Not a valid YouTube URL");
     els.videoStatus.classList.toggle("is-bad", !!item.video && !id);
     applyVideo(item);
     updateCardVideo(state.currentIndex);
@@ -887,7 +887,7 @@
   function enterCropMode() {
     if (state.currentIndex === null) return;
     var item = state.items[state.currentIndex];
-    if (item.w === item.h) { flashStatus("정사각형 이미지는 썸네일 조정이 필요 없습니다"); return; }
+    if (item.w === item.h) { flashStatus("Square images need no thumbnail adjustment"); return; }
     closeVideo();                      /* 크롭 중에는 영상 바를 숨기므로 재생도 멈춘다 */
     els.stageMotion.pause();
     if (item.motion === "gif") els.stageImage.src = fullSrc(item.id);   /* 움직이는 프레임 위에서 자를 수 없다 */
@@ -979,7 +979,7 @@
       persist();
       updateCardThumb(idx);
       exitCropMode();
-      flashStatus("썸네일을 갱신했습니다 — 준비되면 \"이미지 파일 내보내기\"로 저장하세요");
+      flashStatus("Thumbnail updated — use \"Export image files\" when you are ready");
     });
   });
 
@@ -991,7 +991,7 @@
   function setEditMode(on) {
     state.editMode = on;
     els.body.classList.toggle("edit-mode", on);
-    els.editToggle.textContent = on ? "편집 종료" : "편집하기";
+    els.editToggle.textContent = on ? "Done editing" : "Edit";
     if (!on) exitCropMode();
 
     [els.coverTagline, els.panelCategory, els.panelTitle, els.panelYear, els.panelDesc].forEach(function (el) {
@@ -1035,7 +1035,7 @@
       persist();
       renderPartPick();
       renderGrid();
-      flashStatus("파트를 " + partLabel(b.dataset.part) + "로 지정했습니다");
+      flashStatus("Moved to " + partLabel(b.dataset.part));
     });
   });
 
@@ -1056,10 +1056,10 @@
   function buildDataFileText() {
     var lines = [];
     lines.push("/*");
-    lines.push("  편집 모드에서 내보낸 데이터입니다.");
-    lines.push("  js/data.js 를 이 파일 내용으로 덮어쓰면 편집한 내용이 기본값이 됩니다.");
-    lines.push("  새로 추가했거나 썸네일을 다시 자른 이미지가 있다면, \"이미지 파일 내보내기\"로 받은");
-    lines.push("  webp 파일도 assets/img/full·assets/img/thumb 폴더에 함께 넣어주세요.");
+    lines.push("  Exported from edit mode.");
+    lines.push("  Overwrite js/data.js with this file to make these edits the defaults.");
+    lines.push("  If you added images or re-cropped thumbnails, also drop the webp files from");
+    lines.push("  \"Export image files\" into assets/img/full and assets/img/thumb.");
     lines.push("*/");
     lines.push("");
     lines.push("window.SITE_META = {");
@@ -1089,7 +1089,7 @@
       els.editStatus.classList.remove("is-ok");
       els.editStatus.classList.remove("is-warn");
       els.editStatus.classList.remove("is-bad");
-      els.editStatus.textContent = "편집 모드 · 변경 사항은 이 브라우저에 자동 저장됩니다";
+      els.editStatus.textContent = "Edit mode · changes are saved automatically in this browser";
     }, hold);
   }
 
@@ -1107,23 +1107,23 @@
   els.exportBtn.addEventListener("click", function () {
     var text = buildDataFileText();
     downloadBlob(new Blob([text], { type: "text/javascript" }), "data.js");
-    flashStatus("data.js 파일을 내보냈습니다 — js/data.js를 이 파일로 바꿔주세요");
+    flashStatus("Exported data.js — replace js/data.js with this file");
   });
 
   els.exportImagesBtn.addEventListener("click", function () {
     var keys = Object.keys(blobRaw);
-    if (!keys.length) { flashStatus("내보낼 새 이미지 파일이 없습니다"); return; }
+    if (!keys.length) { flashStatus("No new image files to export"); return; }
     keys.forEach(function (key) {
       var parts = key.split(":");
       downloadBlob(blobRaw[key], parts[1] === "motion"
         ? parts[0] + "-motion." + assetPath(key).split(".").pop()
         : parts[0] + "-" + parts[1] + ".webp");
     });
-    flashStatus(keys.length + "개 이미지 파일을 내보냈습니다 — 파일명에서 -full/-thumb를 지우고 assets/img/full·thumb 폴더에 넣어주세요");
+    flashStatus("Exported " + keys.length + " image files — strip the -full/-thumb suffix and put them in assets/img/full and assets/img/thumb");
   });
 
   els.resetBtn.addEventListener("click", function () {
-    if (!window.confirm("편집한 순서·내용·추가한 이미지를 모두 초기화할까요? 이 동작은 되돌릴 수 없습니다.")) return;
+    if (!window.confirm("Reset all edits — order, text and added images? This cannot be undone.")) return;
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
     Object.keys(blobMap).forEach(function (key) { URL.revokeObjectURL(blobMap[key]); });
     blobMap = {};
@@ -1140,15 +1140,15 @@
     renderMeta();
     setStageImageInitial();
     renderGrid();
-    flashStatus("편집 내용을 초기화했습니다");
+    flashStatus("Edits reset.");
   });
 
   // ---------- 파트 (일러스트 / 애니메이션 / 개발) ----------
   /* 탭으로 감추지 않고 아래로 쌓는다. 펼치지 않아도 전부 보인다. */
   var PART_SECTIONS = [
-    { key: "illust", label: "일러스트" },
-    { key: "anim",   label: "애니메이션" },
-    { key: "dev",    label: "개발" }
+    { key: "illust", label: "Illustration" },
+    { key: "anim",   label: "Animation" },
+    { key: "dev",    label: "Development" }
   ];
   var pendingPart = DEFAULT_PART;   /* "+" 를 누른 파트 — 올린 파일이 여기로 들어간다 */
 
@@ -1156,7 +1156,7 @@
     for (var i = 0; i < PART_SECTIONS.length; i++) {
       if (PART_SECTIONS[i].key === key) return PART_SECTIONS[i].label;
     }
-    return "일러스트";
+    return "Illustration";
   }
   function partIndices(part) {
     var out = [];
@@ -1189,7 +1189,7 @@
      평소에는 포스터를 보여주고 호버·상세에서만 재생한다 — 그리드 수십 칸이
      한꺼번에 재생되면 브라우저가 버티지 못한다. */
   /* 한 파일의 상한은 우리 취향이 아니라 GitHub 이 정한다 — 한 파일 100MB 를
-     넘기면 받아주지 않는다. "사이트에 저장"은 파일을 base64 로 바꿔 올리는데
+     넘기면 받아주지 않는다. "Save to site" 버튼은 파일을 base64 로 바꿔 올리는데
      그 과정에서 4/3 배로 부풀기 때문에, 원본이 75MB 를 넘으면 그 시점에
      업로드가 깨진다. 그래서 70MB 를 천장으로 둔다.
      20MB 부터는 막지 않고 알려만 준다 — 올라는 가지만 보는 사람이 기다린다. */
@@ -1433,12 +1433,12 @@
   }
 
   function describeGhError(e) {
-    if (e && e.status === 401) return "토큰이 유효하지 않습니다 — 다시 발급해 주세요";
-    if (e && e.status === 403) return "권한이 부족합니다 — Contents 를 Read and write 로 설정했는지 확인해 주세요";
-    if (e && e.status === 404) return "저장소에 접근할 수 없습니다 — 토큰에 illustrator-portfolio 를 선택했는지 확인해 주세요";
-    if (e && (e.status === 409 || e.status === 422)) return "저장소가 그 사이 바뀌었습니다 — 새로고침 후 다시 시도해 주세요";
-    if (e && e.status) return "저장 실패 (오류 " + e.status + ")";
-    return "저장 실패 — 네트워크를 확인해 주세요";
+    if (e && e.status === 401) return "Token is not valid — please issue a new one";
+    if (e && e.status === 403) return "Not enough permission — check that Contents is set to Read and write";
+    if (e && e.status === 404) return "Cannot reach the repository — check that the token has illustrator-portfolio selected";
+    if (e && (e.status === 409 || e.status === 422)) return "The repository changed meanwhile — reload and try again";
+    if (e && e.status) return "Save failed (error " + e.status + ")";
+    return "Save failed — check your network";
   }
 
   function publishToSite() {
@@ -1448,7 +1448,7 @@
     els.publishBtn.disabled = true;
     var keys = Object.keys(blobRaw);
     var baseSha, baseTree, tree = [];
-    flashStatus("저장 준비 중…", "");
+    flashStatus("Preparing…", "");
 
     ghApi("GET", "/git/ref/heads/" + REPO_BRANCH, token)
       .then(function (ref) {
@@ -1462,7 +1462,7 @@
         /* 이미지는 blob 으로 올린 뒤 트리에 sha 로 엮는다 */
         return keys.reduce(function (chain, key, i) {
           return chain.then(function () {
-            flashStatus("이미지 업로드 " + (i + 1) + "/" + keys.length + "…", "");
+            flashStatus("Uploading images " + (i + 1) + "/" + keys.length + "…", "");
             return blobToBase64(blobRaw[key])
               .then(function (b64) {
                 return ghApi("POST", "/git/blobs", token, { content: b64, encoding: "base64" });
@@ -1477,12 +1477,12 @@
         }, Promise.resolve());
       })
       .then(function () {
-        flashStatus("커밋 중…", "");
+        flashStatus("Committing…", "");
         return ghApi("POST", "/git/trees", token, { base_tree: baseTree, tree: tree });
       })
       .then(function (newTree) {
-        var msg = "site: 작품 " + state.items.length + "개 저장"
-          + (keys.length ? " (이미지 " + keys.length + "개)" : "");
+        var msg = "site: save " + state.items.length + " pieces"
+          + (keys.length ? " (" + keys.length + " images)" : "");
         return ghApi("POST", "/git/commits", token, {
           message: msg, tree: newTree.sha, parents: [baseSha]
         });
@@ -1491,7 +1491,7 @@
         return ghApi("PATCH", "/git/refs/heads/" + REPO_BRANCH, token, { sha: commit.sha });
       })
       .then(function () {
-        flashStatus("저장했습니다 — 1~2분 뒤 사이트에 반영됩니다", "ok");
+        flashStatus("Saved — live on the site in 1-2 minutes", "ok");
       })
       .catch(function (e) {
         flashStatus(describeGhError(e), "bad");
@@ -1509,7 +1509,7 @@
   els.tokenForgetBtn.addEventListener("click", function () {
     forgetToken();
     closeTokenPanel();
-    flashStatus("저장된 토큰을 지웠습니다", "");
+    flashStatus("Stored token cleared", "");
   });
   els.tokenSaveBtn.addEventListener("click", function () {
     var v = els.tokenInput.value.trim();

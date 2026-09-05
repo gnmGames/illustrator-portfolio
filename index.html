@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JUNGON KIM — Illustration Portfolio</title>
-<meta name="description" content="일러스트레이터 포트폴리오">
+<meta name="description" content="Illustration portfolio">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" as="style" crossorigin
   href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
@@ -22,7 +22,7 @@
   <nav class="topbar__nav">
     <button class="topbar__link" id="worksLink" type="button">Works</button>
     <a class="topbar__link" href="#credits">Credits</a>
-    <button class="edit-toggle" id="editToggle" type="button">편집하기</button>
+    <button class="edit-toggle" id="editToggle" type="button">Edit</button>
   </nav>
 </header>
 
@@ -39,64 +39,64 @@
           <img class="vfacade__thumb" id="videoThumb" alt="" aria-hidden="true">
           <span class="vfacade__body">
             <span class="vfacade__play" aria-hidden="true"></span>
-            <span class="vfacade__label">Process Video<i>제작 과정 영상 보기</i></span>
+            <span class="vfacade__label">Process Video<i>Watch the process video</i></span>
           </span>
         </button>
         <div class="vframe" id="videoFrame"></div>
-        <button class="vclose" id="videoClose" type="button">영상 닫기</button>
+        <button class="vclose" id="videoClose" type="button">Close video</button>
       </div>
     </div>
     <div class="stage__scrim" aria-hidden="true"></div>
 
     <div class="stage__cover" id="stageCover">
       <p class="stage__eyebrow">ILLUSTRATION PORTFOLIO</p>
-      <h1 class="stage__tagline" id="coverTagline" data-field="tagline" data-placeholder="한 줄 소개를 입력하세요">캐릭터에 생명을 그려 넣습니다.</h1>
-      <button class="stage__scrollcue" id="scrollCue" type="button" aria-label="작품 보러가기">
+      <h1 class="stage__tagline" id="coverTagline" data-field="tagline" data-placeholder="Write a one-line intro">I draw life into characters.</h1>
+      <button class="stage__scrollcue" id="scrollCue" type="button" aria-label="View works">
         <span>Scroll</span>
         <i></i>
       </button>
     </div>
 
     <aside class="stage__panel" id="stagePanel">
-      <button class="stage__close" id="stageClose" type="button" aria-label="닫기">✕</button>
+      <button class="stage__close" id="stageClose" type="button" aria-label="Close">✕</button>
       <p class="stage__count"><span id="panelIndex">01</span><i>/</i><span id="panelTotal">28</span></p>
-      <p class="stage__field stage__category" id="panelCategory" data-placeholder="카테고리 (예: 캐릭터, 배경)"></p>
-      <h2 class="stage__field stage__piece-title" id="panelTitle" data-placeholder="제목을 입력하세요"></h2>
-      <p class="stage__field stage__year" id="panelYear" data-placeholder="연도"></p>
-      <p class="stage__field stage__desc" id="panelDesc" data-placeholder="이 작품에 대한 설명을 입력하세요."></p>
+      <p class="stage__field stage__category" id="panelCategory" data-placeholder="Category (e.g. Character, Environment)"></p>
+      <h2 class="stage__field stage__piece-title" id="panelTitle" data-placeholder="Title"></h2>
+      <p class="stage__field stage__year" id="panelYear" data-placeholder="Year"></p>
+      <p class="stage__field stage__desc" id="panelDesc" data-placeholder="Describe this piece."></p>
 
       <div class="stage__part-edit" id="partEdit">
-        <label>파트</label>
+        <label>Part</label>
         <div class="part-pick" id="partPick">
-          <button type="button" data-part="illust">일러스트</button>
-          <button type="button" data-part="anim">애니메이션</button>
-          <button type="button" data-part="dev">개발</button>
+          <button type="button" data-part="illust">Illustration</button>
+          <button type="button" data-part="anim">Animation</button>
+          <button type="button" data-part="dev">Development</button>
         </div>
       </div>
 
       <div class="stage__video-edit" id="videoEdit">
-        <label for="videoUrlInput">프로세스 영상 (YouTube 주소)</label>
+        <label for="videoUrlInput">Process video (YouTube URL)</label>
         <input type="url" id="videoUrlInput" autocomplete="off" spellcheck="false"
-               placeholder="https://youtu.be/... — 없으면 비워두세요">
+               placeholder="https://youtu.be/... — leave empty if none">
         <p class="video-edit__status" id="videoStatus"></p>
       </div>
 
       <div class="stage__edit-actions" id="stageEditActions">
-        <button id="cropEditBtn" type="button">썸네일 편집</button>
-        <button id="deleteItemBtn" type="button" class="danger">이 작품 삭제</button>
+        <button id="cropEditBtn" type="button">Edit thumbnail</button>
+        <button id="deleteItemBtn" type="button" class="danger">Delete this piece</button>
       </div>
 
       <div class="crop-controls" id="cropControls">
-        <p class="crop-controls__hint">네모 박스를 드래그해서 위치를 옮기고, 슬라이더로 크기를 조절하세요.</p>
+        <p class="crop-controls__hint">Drag the box to reposition it, and use the slider to resize.</p>
         <div class="crop-controls__zoom">
-          <span>축소</span>
+          <span>Out</span>
           <input type="range" id="cropZoomRange" min="20" max="100" value="100" step="1">
-          <span>확대</span>
+          <span>In</span>
         </div>
         <div class="crop-controls__row">
-          <button id="cropCenterBtn" type="button">가운데로</button>
-          <button id="cropCancelBtn" type="button">취소</button>
-          <button id="cropApplyBtn" type="button" class="primary">적용</button>
+          <button id="cropCenterBtn" type="button">Center</button>
+          <button id="cropCancelBtn" type="button">Cancel</button>
+          <button id="cropApplyBtn" type="button" class="primary">Apply</button>
         </div>
       </div>
 
@@ -105,9 +105,9 @@
         <button id="nextBtn" type="button">Next →</button>
       </div>
       <p class="stage__keyhint">
-        <kbd>←</kbd><kbd>→</kbd> <span>또는</span> <kbd>Space</kbd> <span>작품 이동</span>
+        <kbd>←</kbd><kbd>→</kbd> <span>or</span> <kbd>Space</kbd> <span>Navigate</span>
         <i></i>
-        <kbd>Esc</kbd> <span>닫기</span>
+        <kbd>Esc</kbd> <span>Close</span>
       </p>
     </aside>
 
@@ -115,12 +115,12 @@
       <div class="crop-box" id="cropBox"></div>
     </div>
 
-    <button class="stage__arrow stage__arrow--prev" id="arrowPrev" type="button" aria-label="이전 작품"></button>
-    <button class="stage__arrow stage__arrow--next" id="arrowNext" type="button" aria-label="다음 작품"></button>
+    <button class="stage__arrow stage__arrow--prev" id="arrowPrev" type="button" aria-label="Previous piece"></button>
+    <button class="stage__arrow stage__arrow--next" id="arrowNext" type="button" aria-label="Next piece"></button>
   </section>
 
   <section class="gallery" id="gallery">
-    <p class="edit-hint" id="editHint">편집 모드입니다 — 파트별 그리드에서 카드를 드래그하거나 ◀ ▶ 버튼으로 순서를 바꿀 수 있습니다. 전체에서 맨 앞 작품이 대문 이미지가 됩니다. 카드를 클릭해 열면 오른쪽 패널에서 파트·제목·설명·썸네일을 편집하거나 삭제할 수 있고, 각 파트의 "+" 칸으로 이미지·GIF·영상을 추가할 수 있습니다. GIF와 영상은 썸네일에 마우스를 올리면 재생됩니다. 한 파일 70MB까지 올릴 수 있고, 같은 화면이라면 GIF보다 MP4·WebM이 수십 배 작으니 되도록 영상으로 올려주세요.</p>
+    <p class="edit-hint" id="editHint">Edit mode — drag cards within a part, or use the &#9664; &#9654; buttons to reorder. The very first piece overall becomes the cover image. Open a card to edit its part, title, description and thumbnail on the right, or delete it; the "+" tile in each part adds images, GIFs and video. GIFs and video play when you hover the thumbnail. Up to 70MB per file — for the same motion, MP4/WebM is far smaller than GIF.</p>
     <div id="sections"></div>
     <input type="file" id="fileInput" accept="image/*,video/mp4,video/webm" multiple hidden>
   </section>
@@ -128,112 +128,112 @@
   <section class="credits" id="credits" aria-labelledby="creditsHead">
     <div class="gallery__head">
       <h2 id="creditsHead" lang="en">Credits</h2>
-      <p class="gallery__count">경력사항 · <span>14</span></p>
+      <p class="gallery__count"><span>14</span> credits</p>
     </div>
 
     <ol class="cr-credits">
       <li class="cr-credit" id="c-01">
         <span class="cr-credit__no" aria-hidden="true">01</span>
         <div class="cr-credit__body">
-          <h3 class="cr-credit__client">텐센트/네오플</h3>
-          <p class="cr-credit__work">던전앤파이터 모바일 이벤트 일러스트 작업</p>
+          <h3 class="cr-credit__client">Tencent / Neople</h3>
+          <p class="cr-credit__work">Event illustrations for Dungeon &amp; Fighter Mobile</p>
         </div>
       </li>
       <li class="cr-credit" id="c-02">
         <span class="cr-credit__no" aria-hidden="true">02</span>
         <div class="cr-credit__body">
-          <h3 class="cr-credit__client">(주)비주얼샤워</h3>
-          <p class="cr-credit__work">B2B, 하얀섬, 블루스톤 캐릭터 원화 및 일러스트 작업</p>
+          <h3 class="cr-credit__client">Visual Shower</h3>
+          <p class="cr-credit__work">Character concept art and illustrations for B2B, White Island and Bluestone</p>
         </div>
       </li>
       <li class="cr-credit" id="c-03">
         <span class="cr-credit__no" aria-hidden="true">03</span>
         <div class="cr-credit__body">
-          <h3 class="cr-credit__client">게임빌</h3>
-          <p class="cr-credit__work">엘룬 캐릭터 일러스트 제작</p>
+          <h3 class="cr-credit__client">GAMEVIL</h3>
+          <p class="cr-credit__work">Character illustrations for Elune</p>
         </div>
       </li>
       <li class="cr-credit" id="c-04">
         <span class="cr-credit__no" aria-hidden="true">04</span>
         <div class="cr-credit__body">
-          <h3 class="cr-credit__client">(주)넷마블</h3>
-          <p class="cr-credit__work">포커게임 캐릭터 일러스트 작업</p>
+          <h3 class="cr-credit__client">Netmarble</h3>
+          <p class="cr-credit__work">Character illustrations for a poker game</p>
         </div>
       </li>
       <li class="cr-credit" id="c-05">
         <span class="cr-credit__no" aria-hidden="true">05</span>
         <div class="cr-credit__body">
-          <h3 class="cr-credit__client">JCCD STUDIO(텐센트)</h3>
-          <p class="cr-credit__work">킹오브파이터 IP 프로젝트 일러스트 원화</p>
+          <h3 class="cr-credit__client">JCCD STUDIO (Tencent)</h3>
+          <p class="cr-credit__work">Concept illustrations for a King of Fighters IP project</p>
         </div>
       </li>
       <li class="cr-credit" id="c-06">
         <span class="cr-credit__no" aria-hidden="true">06</span>
         <div class="cr-credit__body">
-          <h3 class="cr-credit__client">YG엔터테인먼트</h3>
-          <p class="cr-credit__work">비공개 프로젝트 일러스트 작업</p>
+          <h3 class="cr-credit__client">YG Entertainment</h3>
+          <p class="cr-credit__work">Illustrations for an undisclosed project</p>
         </div>
       </li>
       <li class="cr-credit" id="c-07">
         <span class="cr-credit__no" aria-hidden="true">07</span>
         <div class="cr-credit__body">
-          <h3 class="cr-credit__client">재담미디어</h3>
-          <p class="cr-credit__work">약한영웅 단행본 커버 일러스트</p>
+          <h3 class="cr-credit__client">Jaedam Media</h3>
+          <p class="cr-credit__work">Cover illustration for the Weak Hero print edition</p>
         </div>
       </li>
       <li class="cr-credit" id="c-08">
         <span class="cr-credit__no" aria-hidden="true">08</span>
         <div class="cr-credit__body">
           <h3 class="cr-credit__client">Maiden Gaming Inc.</h3>
-          <p class="cr-credit__work">캐릭터 일러스트 제작</p>
+          <p class="cr-credit__work">Character illustrations</p>
         </div>
       </li>
       <li class="cr-credit" id="c-09">
         <span class="cr-credit__no" aria-hidden="true">09</span>
         <div class="cr-credit__body">
-          <h3 class="cr-credit__client">(주)제오닉스</h3>
-          <p class="cr-credit__work">TCG 일러스트 제작</p>
+          <h3 class="cr-credit__client">Zeonix</h3>
+          <p class="cr-credit__work">TCG illustrations</p>
         </div>
       </li>
       <li class="cr-credit" id="c-10">
         <span class="cr-credit__no" aria-hidden="true">10</span>
         <div class="cr-credit__body">
-          <h3 class="cr-credit__client">(주)앤서스랩</h3>
-          <p class="cr-credit__work">캐릭터 일러스트 제작</p>
+          <h3 class="cr-credit__client">AnswersLab</h3>
+          <p class="cr-credit__work">Character illustrations</p>
         </div>
       </li>
       <li class="cr-credit" id="c-11">
         <span class="cr-credit__no" aria-hidden="true">11</span>
         <div class="cr-credit__body">
-          <h3 class="cr-credit__client">(주)넷마블컴퍼니</h3>
-          <p class="cr-credit__work">캐릭터 일러스트 작업</p>
+          <h3 class="cr-credit__client">Netmarble Company</h3>
+          <p class="cr-credit__work">Character illustrations</p>
         </div>
       </li>
       <li class="cr-credit" id="c-12">
         <span class="cr-credit__no" aria-hidden="true">12</span>
         <div class="cr-credit__body">
           <h3 class="cr-credit__client">E7 MOBILE</h3>
-          <p class="cr-credit__work">캐릭터 일러스트 작업</p>
+          <p class="cr-credit__work">Character illustrations</p>
         </div>
       </li>
       <li class="cr-credit" id="c-13">
         <span class="cr-credit__no" aria-hidden="true">13</span>
         <div class="cr-credit__body">
           <h3 class="cr-credit__client">SKT</h3>
-          <p class="cr-credit__work">소셜 서비스 캐릭터 디자인</p>
+          <p class="cr-credit__work">Character design for a social service</p>
         </div>
       </li>
       <li class="cr-credit" id="c-14">
         <span class="cr-credit__no" aria-hidden="true">14</span>
         <div class="cr-credit__body">
-          <h3 class="cr-credit__client">EstSoftInc.</h3>
-          <p class="cr-credit__work">메인 일러스트 및 캐릭터 디자인 작업</p>
+          <h3 class="cr-credit__client">EstSoft Inc.</h3>
+          <p class="cr-credit__work">Key illustration and character design</p>
         </div>
       </li>
     </ol>
 
     <div class="cr-contact">
-      <p class="cr-contact__label">문의</p>
+      <p class="cr-contact__label">Contact</p>
       <div class="cr-contact__lines">
         <a class="cr-contact__mail" href="mailto:c_r_u@naver.com">c_r_u@naver.com</a>
         <a class="cr-contact__tel" href="tel:+821074800840">010-7480-0840</a>
@@ -249,43 +249,43 @@
 </footer>
 
 <div class="edit-bar" id="editBar">
-  <span class="edit-bar__status" id="editStatus">편집 모드 · 변경 사항은 이 브라우저에 자동 저장됩니다</span>
+  <span class="edit-bar__status" id="editStatus">Edit mode · changes are saved automatically in this browser</span>
   <div class="edit-bar__actions">
-    <button id="publishBtn" type="button" class="publish">사이트에 저장</button>
-    <button id="tokenBtn" type="button" title="GitHub 토큰 설정">토큰</button>
-    <button id="exportBtn" type="button">data.js로 내보내기</button>
-    <button id="exportImagesBtn" type="button">이미지 파일 내보내기</button>
-    <button id="resetBtn" type="button">편집 초기화</button>
+    <button id="publishBtn" type="button" class="publish">Save to site</button>
+    <button id="tokenBtn" type="button" title="GitHub token settings">Token</button>
+    <button id="exportBtn" type="button">Export data.js</button>
+    <button id="exportImagesBtn" type="button">Export image files</button>
+    <button id="resetBtn" type="button">Reset edits</button>
   </div>
 </div>
 
 <div class="token-panel" id="tokenPanel" role="dialog" aria-modal="true" aria-labelledby="tokenPanelTitle">
   <div class="token-panel__box">
-    <h2 class="token-panel__title" id="tokenPanelTitle">사이트에 저장하려면 GitHub 토큰이 필요합니다</h2>
+    <h2 class="token-panel__title" id="tokenPanelTitle">Saving to the site needs a GitHub token</h2>
 
     <ol class="token-panel__steps">
-      <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">GitHub 토큰 발급 페이지 열기</a></li>
-      <li>Token name: 아무거나 (예: <b>portfolio-save</b>)</li>
-      <li>Expiration: 원하는 기간 (90일 권장)</li>
-      <li>Repository access: <b>Only select repositories</b> → <b>illustrator-portfolio</b> 하나만 선택</li>
-      <li>Permissions → Repository permissions → <b>Contents</b> 를 <b>Read and write</b> 로</li>
-      <li>Generate token 후 나온 문자열을 아래에 붙여넣기</li>
+      <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">Open the GitHub token page</a></li>
+      <li>Token name: anything (e.g. <b>portfolio-save</b>)</li>
+      <li>Expiration: your choice (90 days recommended)</li>
+      <li>Repository access: <b>Only select repositories</b> → <b>illustrator-portfolio</b>  only</li>
+      <li>Permissions → Repository permissions → <b>Contents</b>: <b>Read and write</b></li>
+      <li>Generate token, then paste the string below</li>
     </ol>
 
     <input type="password" id="tokenInput" placeholder="github_pat_..." autocomplete="off" spellcheck="false">
 
     <label class="token-panel__remember">
       <input type="checkbox" id="tokenRemember">
-      <span>이 브라우저에 기억하기 — 체크하지 않으면 탭을 닫을 때 지워집니다</span>
+      <span>Remember in this browser — otherwise it is cleared when the tab closes</span>
     </label>
 
-    <p class="token-panel__warn">이 계정의 다른 GitHub Pages 사이트(oh-jungmi, ai-game-builder-class, assetstore)가 같은 저장 공간을 씁니다. 위 설정대로 <b>이 저장소에만</b> 권한을 준 토큰을 쓰세요.</p>
+    <p class="token-panel__warn">Other GitHub Pages sites on this account share the same browser storage. Use a token scoped to <b>this repository only</b>, exactly as set up above.</p>
 
     <div class="token-panel__row">
-      <button id="tokenCancelBtn" type="button">취소</button>
-      <button id="tokenSaveBtn" type="button" class="publish">확인</button>
+      <button id="tokenCancelBtn" type="button">Cancel</button>
+      <button id="tokenSaveBtn" type="button" class="publish">Save</button>
     </div>
-    <button id="tokenForgetBtn" type="button" class="token-panel__forget">저장된 토큰 지우기</button>
+    <button id="tokenForgetBtn" type="button" class="token-panel__forget">Forget stored token</button>
   </div>
 </div>
 
