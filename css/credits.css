@@ -165,3 +165,50 @@
   .cr-credit:hover .cr-credit__no,
   .cr-credit:hover .cr-credit__body{ transform:none; }
 }
+
+/* ============================================================
+   보유 스킬 — 크레딧과 같은 3단 헤어라인 리듬을 따른다
+   ============================================================ */
+.cr-skills{
+  margin-top:clamp(40px,6vh,72px);
+  display:flex; align-items:flex-start; gap:clamp(18px,3vw,48px); flex-wrap:wrap;
+  padding-top:clamp(22px,3vh,34px);
+  border-top:1px solid var(--line);
+}
+.cr-skills__label{
+  margin:0; flex:none; padding-top:12px;
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--fg-muted);
+}
+.cr-skills__list{
+  list-style:none; margin:0; padding:0;
+  flex:1 1 320px; min-width:0;
+  display:grid; grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:0 clamp(26px,3.4vw,64px);
+}
+.cr-skills__list li{
+  padding:11px 0;
+  border-bottom:1px solid var(--line-soft);
+  font-size:clamp(13.5px,1.02vw,16.5px); line-height:1.4; letter-spacing:-.02em;
+  color:var(--fg);
+  /* 크레딧과 같은 방식: 기본은 '보임', backwards 로 시작 전 구간만 감춘다 */
+  animation:cr-up .7s var(--ease) backwards;
+}
+.cr-skills__list li:nth-child(1){ animation-delay:.02s }
+.cr-skills__list li:nth-child(2){ animation-delay:.05s }
+.cr-skills__list li:nth-child(3){ animation-delay:.08s }
+.cr-skills__list li:nth-child(4){ animation-delay:.11s }
+.cr-skills__list li:nth-child(5){ animation-delay:.14s }
+.cr-skills__list li:nth-child(6){ animation-delay:.17s }
+
+@media (max-width:1180px){
+  .cr-skills__list{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:820px){
+  .cr-skills{ flex-direction:column; align-items:flex-start; gap:6px; }
+  .cr-skills__label{ padding-top:0; }
+  .cr-skills__list{ grid-template-columns:1fr; width:100%; }
+}
+@media (prefers-reduced-motion:reduce){
+  .cr-skills__list li{ opacity:1; transform:none; animation:none; }
+}
