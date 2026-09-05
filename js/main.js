@@ -11,7 +11,7 @@
   /* 파트는 반드시 셋 중 하나다. 값이 없거나 모르는 값이면 일러스트로 본다.
      어느 파트에도 속하지 않는 작품이 생기면 그리는 섹션이 없어서 화면에서
      그대로 사라진다 — 기본값을 두는 이유는 편의가 아니라 안전장치다. */
-  var PART_KEYS = ["illust", "anim", "dev"];
+  var PART_KEYS = ["illust", "anim", "ai", "dev"];
   var DEFAULT_PART = "illust";
   function normalizePart(p) {
     return PART_KEYS.indexOf(p) >= 0 ? p : DEFAULT_PART;
@@ -1148,6 +1148,7 @@
   var PART_SECTIONS = [
     { key: "illust", label: "Illustration" },
     { key: "anim",   label: "Animation" },
+    { key: "ai",     label: "AI-Assisted" },
     { key: "dev",    label: "Development" }
   ];
   var pendingPart = DEFAULT_PART;   /* "+" 를 누른 파트 — 올린 파일이 여기로 들어간다 */
