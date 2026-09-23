@@ -202,6 +202,10 @@
 .cr-skills__list li:nth-child(4){ animation-delay:.11s }
 .cr-skills__list li:nth-child(5){ animation-delay:.14s }
 .cr-skills__list li:nth-child(6){ animation-delay:.17s }
+.cr-skills__list li:nth-child(7){ animation-delay:.20s }
+.cr-skills__list li:nth-child(8){ animation-delay:.23s }
+.cr-skills__list li:nth-child(9){ animation-delay:.26s }
+.cr-skills__list li:nth-child(10){ animation-delay:.29s }
 
 @media (max-width:1180px){
   .cr-skills__list{ grid-template-columns:repeat(2,minmax(0,1fr)); }
