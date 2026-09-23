@@ -159,6 +159,8 @@
 .cr-credit:nth-child(12){ animation-delay:.35s }
 .cr-credit:nth-child(13){ animation-delay:.38s }
 .cr-credit:nth-child(14){ animation-delay:.41s }
+.cr-credit:nth-child(15){ animation-delay:.44s }
+.cr-credit:nth-child(16){ animation-delay:.47s }
 
 @media (prefers-reduced-motion:reduce){
   .cr-credit{ opacity:1; transform:none; animation:none; }
