@@ -405,6 +405,11 @@
     return t;
   }
 
+  /* 호버 때 제목 밑에 띄울 줄. 설명이 있으면 설명, 없으면 카테고리. */
+  function cardSubline(item) {
+    return ((item.description || item.category || "") + "").trim();
+  }
+
   function buildCard(idx, partKey) {
     var item = state.items[idx];
     var card = document.createElement("div");
@@ -440,8 +445,12 @@
     var titleSpan = document.createElement("span");
     titleSpan.className = "card__title";
     titleSpan.textContent = displayTitle(item, idx);
+    var descSpan = document.createElement("span");
+    descSpan.className = "card__desc";
+    descSpan.textContent = cardSubline(item);
     overlay.appendChild(num);
     overlay.appendChild(titleSpan);
+    overlay.appendChild(descSpan);
 
     frame.appendChild(img);
     frame.appendChild(badge);
@@ -521,9 +530,11 @@
     if (!card) return;
     var item = state.items[idx];
     var titleEl = card.querySelector(".card__title");
-    var imgEl = card.querySelector("img");
+    var descEl = card.querySelector(".card__desc");
+    var imgEl = card.querySelector(".card__frame > img:not(.card__motion-gif)");
     var label = displayTitle(item, idx);
     if (titleEl) titleEl.textContent = label;
+    if (descEl) descEl.textContent = cardSubline(item);
     if (imgEl) imgEl.alt = label;
   }
 
@@ -1018,7 +1029,12 @@
 
   bindEditable(els.coverTagline, function (v) { state.meta.tagline = v; });
   bindEditable(els.brandName, function (v) { state.meta.siteName = v; syncSiteNameMirrors(); });
-  bindEditable(els.panelCategory, function (v) { if (state.currentIndex !== null) state.items[state.currentIndex].category = v; });
+  bindEditable(els.panelCategory, function (v) {
+    if (state.currentIndex !== null) {
+      state.items[state.currentIndex].category = v;
+      updateCardCaption(state.currentIndex);
+    }
+  });
   bindEditable(els.panelTitle, function (v) {
     if (state.currentIndex !== null) {
       state.items[state.currentIndex].title = v;
@@ -1026,7 +1042,12 @@
     }
   });
   bindEditable(els.panelYear, function (v) { if (state.currentIndex !== null) state.items[state.currentIndex].year = v; });
-  bindEditable(els.panelDesc, function (v) { if (state.currentIndex !== null) state.items[state.currentIndex].description = v; });
+  bindEditable(els.panelDesc, function (v) {
+    if (state.currentIndex !== null) {
+      state.items[state.currentIndex].description = v;
+      updateCardCaption(state.currentIndex);
+    }
+  });
 
   Array.prototype.forEach.call(els.partPick.children, function (b) {
     b.addEventListener("click", function () {
